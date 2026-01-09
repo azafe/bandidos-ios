@@ -1,0 +1,120 @@
+/* ===== IMPORTS (siempre deben ir primero) ===== */
+@import "./layout.css";
+@import "./sidebar.css";
+@import "./forms.css";
+@import "./table.css";
+@import "./components.css";
+
+/* ===== Variables ===== */
+:root {
+  --color-primary: #d948ef;
+  --color-primary-light: #f6d7fb;
+  --color-primary-dark: #b12fd1;
+  --color-accent: #ff4fa8;
+  --color-accent-strong: #b344ff;
+
+  --color-bg: #0f1016;
+  --color-bg-soft: #171a24;
+  --color-surface: rgba(255, 255, 255, 0.92);
+  --color-surface-strong: #ffffff;
+
+  --color-text: #10131f;
+  --color-text-soft: #6a7184;
+  --color-border-soft: #e1e5f0;
+  --color-focus: #d948ef;
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+
+  --shadow-soft: 0 16px 40px rgba(12, 14, 23, 0.18);
+  --shadow-strong: 0 24px 60px rgba(10, 12, 20, 0.28);
+}
+
+/* ===== Reset ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Body ===== */
+body {
+  font-family: "Poppins", system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 79, 168, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 10%, rgba(80, 230, 220, 0.2), transparent 60%),
+    radial-gradient(circle at 40% 60%, rgba(131, 86, 255, 0.22), transparent 65%),
+    radial-gradient(circle at top left, #2a2e45, #0f1016 60%);
+  background-attachment: fixed;
+  color: var(--color-text);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.12;
+  mix-blend-mode: soft-light;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.btn-danger {
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: #e53935;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-danger:hover {
+  background: #c62828;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-danger:focus-visible {
+  outline: 2px solid #14151f;
+  outline-offset: 3px;
+}

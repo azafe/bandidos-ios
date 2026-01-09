@@ -1,0 +1,84 @@
+/* ===== Sidebar ===== */
+
+.sidebar {
+  width: 260px;
+  background: rgba(16, 18, 26, 0.88);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  z-index: 999;
+}
+
+/* Marca Bandidos dentro del sidebar */
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar__logo-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sidebar__logo-circle img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar__brand-title {
+  font-family: "Fredoka", system-ui;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #f4f6fb;
+}
+
+.sidebar__brand-subtitle {
+  font-size: 0.8rem;
+  color: rgba(230, 233, 245, 0.65);
+}
+
+/* Navegación */
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar__nav-link {
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  color: rgba(232, 236, 248, 0.86);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+
+.sidebar__nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+
+.sidebar__nav-link--active {
+  background: linear-gradient(120deg, var(--color-accent), var(--color-primary));
+  color: #ffffff;
+}

@@ -1,0 +1,106 @@
+/* ===== Formularios ===== */
+.form-card {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
+  max-width: 980px;
+}
+
+/* GRID mobile-first: 1 columna */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px 16px;
+}
+
+/* A partir de desktop, 3 columnas */
+@media (min-width: 900px) {
+  .form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Campo estándar */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+/* Campos que deben ocupar todo el ancho del grid */
+.form-field--full {
+  grid-column: 1 / -1;
+}
+
+/* Labels */
+.form-field label {
+  font-weight: 500;
+  color: var(--color-text-soft);
+}
+
+/* Inputs / selects / textareas */
+.form-field input,
+.form-field select,
+.form-field textarea {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 9px 11px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #f9f9fc;
+  color: #1b1f2f;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px rgba(217, 72, 239, 0.2);
+  outline: none;
+}
+
+/* Acciones del formulario */
+.form-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+/* Botón primary con estado de carga */
+.btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 170px;
+}
+
+/* Spinner dentro del botón */
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: btn-spin 0.7s linear infinite;
+}
+
+/* Cuando está cargando, evitamos pointer-events extra */
+.btn-primary--loading {
+  cursor: wait;
+}
+
+@keyframes btn-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
