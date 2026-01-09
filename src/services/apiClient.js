@@ -1,28 +1,50 @@
 const DEFAULT_BASE_URL =
   "https://bandidos-backend-production.up.railway.app";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const TOKEN_KEY = "bandidos_token";
 
 let unauthorizedHandler = null;
+let cachedToken = null;
+let hasLoadedToken = false;
 
 export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler;
 }
 
-export function getStoredToken() {
-  return window.localStorage.getItem(TOKEN_KEY);
+export async function loadStoredToken() {
+  if (hasLoadedToken) return cachedToken;
+  try {
+    cachedToken = await AsyncStorage.getItem(TOKEN_KEY);
+  } catch (err) {
+    console.warn("[apiClient] No se pudo leer el token:", err);
+    cachedToken = null;
+  } finally {
+    hasLoadedToken = true;
+  }
+  return cachedToken;
 }
 
-export function setStoredToken(token) {
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    window.localStorage.removeItem(TOKEN_KEY);
+export function getStoredToken() {
+  return cachedToken;
+}
+
+export async function setStoredToken(token) {
+  cachedToken = token || null;
+  try {
+    if (token) {
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+    } else {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+    }
+  } catch (err) {
+    console.warn("[apiClient] No se pudo guardar el token:", err);
   }
 }
 
 function buildUrl(path, params) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
+  const baseUrl = process.env.API_BASE_URL || DEFAULT_BASE_URL;
   const url = new URL(path, baseUrl);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

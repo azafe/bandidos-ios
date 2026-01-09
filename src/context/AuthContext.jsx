@@ -3,16 +3,17 @@ import {
   apiRequest,
   publicRequest,
   setStoredToken,
-  getStoredToken,
+  loadStoredToken,
   setUnauthorizedHandler,
 } from "../services/apiClient";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(getStoredToken());
+  const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   const logout = useCallback(() => {
     setToken(null);
@@ -27,11 +28,13 @@ export function AuthProvider({ children }) {
   }, [logout]);
 
   useEffect(() => {
-    setStoredToken(token);
-  }, [token]);
+    if (!bootstrapped) return;
+    void setStoredToken(token);
+  }, [token, bootstrapped]);
 
   const loadMe = useCallback(async () => {
     if (!token) {
+      setUser(null);
       setLoading(false);
       return;
     }
@@ -48,8 +51,25 @@ export function AuthProvider({ children }) {
   }, [token, logout]);
 
   useEffect(() => {
+    let active = true;
+
+    async function init() {
+      const stored = await loadStoredToken();
+      if (!active) return;
+      setToken(stored);
+      setBootstrapped(true);
+    }
+
+    init();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!bootstrapped) return;
     loadMe();
-  }, [loadMe]);
+  }, [bootstrapped, loadMe]);
 
   const login = async (payload) => {
     const data = await publicRequest("/auth/login", {

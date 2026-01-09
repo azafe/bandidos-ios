@@ -1,77 +1,93 @@
 import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function PaymentMethodsPage() {
   const { items, loading, error, createItem, updateItem, deleteItem } =
     useApiResource("/v2/payment-methods");
-  const [name, setName] = useState("");
+  const [form, setForm] = useState({ name: "" });
   const [editingId, setEditingId] = useState(null);
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalName, setModalName] = useState("");
+  const [modalForm, setModalForm] = useState({ name: "" });
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!name.trim()) {
-      alert("Ingresá el nombre del método.");
+  function handleChange(value) {
+    setForm({ name: value });
+  }
+
+  async function handleSubmit() {
+    if (!form.name.trim()) {
+      Alert.alert("Falta informacion", "Ingresa el nombre del metodo.");
       return;
     }
     try {
+      const payload = { name: form.name.trim() };
       if (editingId) {
-        await updateItem(editingId, { name: name.trim() });
+        await updateItem(editingId, payload);
       } else {
-        await createItem({ name: name.trim() });
+        await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el método.");
+      Alert.alert("Error", err.message || "No se pudo guardar el metodo.");
       return;
     }
-    setName("");
+    setForm({ name: "" });
     setEditingId(null);
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este método de pago?");
+    const ok = await confirmDelete("¿Eliminar este metodo?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el método.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el metodo.");
       return false;
     }
   }
 
   function startEdit(item) {
     setEditingId(item.id);
-    setName(item.name || "");
+    setForm({ name: item.name || "" });
   }
 
   function cancelEdit() {
     setEditingId(null);
-    setName("");
+    setForm({ name: "" });
   }
 
   function openModalEdit(item) {
-    setModalName(item.name || "");
+    setModalForm({ name: item.name || "" });
     setIsEditingModal(true);
   }
 
   async function handleModalSave() {
     if (!selectedMethod) return;
-    if (!modalName.trim()) {
-      alert("Ingresá el nombre del método.");
+    if (!modalForm.name.trim()) {
+      Alert.alert("Falta informacion", "Ingresa el nombre del metodo.");
       return;
     }
     try {
-      await updateItem(selectedMethod.id, { name: modalName.trim() });
+      const payload = { name: modalForm.name.trim() };
+      await updateItem(selectedMethod.id, payload);
       setSelectedMethod((prev) =>
-        prev ? { ...prev, name: modalName.trim() } : prev
+        prev ? { ...prev, name: modalForm.name.trim() } : prev
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el método.");
+      Alert.alert("Error", err.message || "No se pudo guardar el metodo.");
     }
   }
 
@@ -81,169 +97,210 @@ export default function PaymentMethodsPage() {
   }
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Métodos de pago</h1>
-          <p className="page-subtitle">
-            Administrá los métodos de pago disponibles.
-          </p>
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <Text style={shared.pageTitle}>Metodos de pago</Text>
+        <Text style={shared.pageSubtitle}>
+          Aparece en servicios y gastos.
+        </Text>
+      </View>
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
-          {editingId ? "Editar método" : "Nuevo método"}
-        </h2>
-        <p className="card-subtitle">Aparece en servicios y gastos.</p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
+          {editingId ? "Editar metodo" : "Nuevo metodo"}
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Configura las opciones disponibles.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="name">Nombre</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Nombre</Text>
+            <TextInput
+              value={form.name}
+              onChangeText={handleChange}
+              style={shared.input}
             />
-          </div>
-        </div>
+          </View>
+        </View>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar método"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar metodo"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
-      </form>
+        </View>
+      </View>
 
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de métodos</h2>
-        <p className="card-subtitle">Métodos configurados en el sistema.</p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de metodos</Text>
+        <Text style={shared.cardSubtitle}>
+          Metodos configurados en el sistema.
+        </Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {items.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin métodos cargados.
-            </div>
-          ) : (
-            items.map((item) => (
-              <div
-                key={item.id}
-                className="list-item"
-                onClick={() => setSelectedMethod(item)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{item.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(item);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Nombre: {item.name || "-"}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {items.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin metodos cargados.
+          </Text>
+        ) : (
+          items.map((item) => (
+            <Pressable
+              key={item.id}
+              style={local.listItem}
+              onPress={() => setSelectedMethod(item)}
+            >
+              <Text style={local.listTitle}>{item.name}</Text>
+              <View style={local.listActions}>
+                <Pressable
+                  style={[shared.buttonSecondary, local.smallButton]}
+                  onPress={() => startEdit(item)}
+                >
+                  <Text style={shared.buttonTextLight}>Editar</Text>
+                </Pressable>
+                <Pressable
+                  style={[shared.buttonDanger, local.smallButton]}
+                  onPress={() => handleDelete(item.id)}
+                >
+                  <Text style={shared.buttonTextLight}>Eliminar</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedMethod)}
         onClose={closeModal}
-        title="Detalle del método"
+        title="Detalle del metodo"
       >
         {selectedMethod && (
-          <>
+          <View>
             {isEditingModal ? (
-              <label className="form-field">
-                <span>Nombre</span>
-                <input
-                  type="text"
-                  value={modalName}
-                  onChange={(e) => setModalName(e.target.value)}
+              <View>
+                <Text style={shared.label}>Nombre</Text>
+                <TextInput
+                  value={modalForm.name}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, name: value }))
+                  }
+                  style={shared.input}
                 />
-              </label>
+              </View>
             ) : (
-              <div>
-                <strong>Nombre:</strong> {selectedMethod.name || "-"}
-              </div>
+              <Text style={local.modalText}>
+                <Text style={local.modalLabel}>Nombre: </Text>
+                {selectedMethod.name || "-"}
+              </Text>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedMethod)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedMethod)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedMethod.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  formGrid: {
+    marginTop: 12,
+  },
+  formField: {
+    marginBottom: 12,
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listActions: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

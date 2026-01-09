@@ -1,7 +1,18 @@
-// src/pages/expenses/FixedExpensesPage.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function FixedExpensesPage() {
   const [filters, setFilters] = useState({ category_id: "", status: "" });
@@ -42,21 +53,28 @@ export default function FixedExpensesPage() {
     status: "active",
   });
 
+  const categoryById = useMemo(() => {
+    return new Map(categories.map((cat) => [String(cat.id), cat.name]));
+  }, [categories]);
+  const paymentById = useMemo(() => {
+    return new Map(paymentMethods.map((m) => [String(m.id), m.name]));
+  }, [paymentMethods]);
+  const supplierById = useMemo(() => {
+    return new Map(suppliers.map((s) => [String(s.id), s.name]));
+  }, [suppliers]);
+
   function formatCurrency(value) {
     return `$${Number(value || 0).toLocaleString("es-AR")}`;
   }
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
+  async function handleSubmit() {
     const amountNumber = Number(form.amount);
     if (!amountNumber || amountNumber <= 0) {
-      alert("Ingresá un monto mensual válido.");
+      Alert.alert("Falta informacion", "Ingresa un monto mensual valido.");
       return;
     }
 
@@ -76,7 +94,7 @@ export default function FixedExpensesPage() {
         await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el gasto fijo.");
+      Alert.alert("Error", err.message || "No se pudo guardar el gasto fijo.");
       return;
     }
 
@@ -90,13 +108,13 @@ export default function FixedExpensesPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este gasto fijo?");
+    const ok = await confirmDelete("¿Eliminar este gasto fijo?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el gasto fijo.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el gasto fijo.");
       return false;
     }
   }
@@ -105,11 +123,11 @@ export default function FixedExpensesPage() {
     setEditingId(expense.id);
     setForm({
       name: expense.name || "",
-      category: expense.category_id || "",
+      category: String(expense.category_id || ""),
       amount: expense.amount ? String(expense.amount) : "",
       dueDay: expense.due_day || expense.dueDay || 1,
-      paymentMethod: expense.payment_method_id || "",
-      supplier: expense.supplier_id || "",
+      paymentMethod: String(expense.payment_method_id || ""),
+      supplier: String(expense.supplier_id || ""),
       status: expense.status || "active",
     });
   }
@@ -130,11 +148,13 @@ export default function FixedExpensesPage() {
   function openModalEdit(expense) {
     setModalForm({
       name: expense.name || "",
-      category: expense.category_id || expense.category?.id || "",
+      category: String(expense.category_id || expense.category?.id || ""),
       amount: expense.amount ? String(expense.amount) : "",
       dueDay: expense.due_day || expense.dueDay || 1,
-      paymentMethod: expense.payment_method_id || expense.payment_method?.id || "",
-      supplier: expense.supplier_id || expense.supplier?.id || "",
+      paymentMethod: String(
+        expense.payment_method_id || expense.payment_method?.id || ""
+      ),
+      supplier: String(expense.supplier_id || expense.supplier?.id || ""),
       status: expense.status || "active",
     });
     setIsEditingModal(true);
@@ -144,7 +164,7 @@ export default function FixedExpensesPage() {
     if (!selectedExpense) return;
     const amountNumber = Number(modalForm.amount);
     if (!amountNumber || amountNumber <= 0) {
-      alert("Ingresá un monto mensual válido.");
+      Alert.alert("Falta informacion", "Ingresa un monto mensual valido.");
       return;
     }
     try {
@@ -174,7 +194,7 @@ export default function FixedExpensesPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el gasto fijo.");
+      Alert.alert("Error", err.message || "No se pudo guardar el gasto fijo.");
     }
   }
 
@@ -184,245 +204,235 @@ export default function FixedExpensesPage() {
   }
 
   return (
-    <div className="page-content">
-      {/* Encabezado */}
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Gastos fijos</h1>
-          <p className="page-subtitle">
-            Registrá los costos mensuales de Bandidos: alquiler, servicios,
-            sueldos, internet, etc.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <select
-            value={filters.category_id}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, category_id: e.target.value }))
-            }
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filters.status}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, status: e.target.value }))
-            }
-          >
-            <option value="">Todos los estados</option>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
-          </select>
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Gastos fijos</Text>
+            <Text style={shared.pageSubtitle}>
+              Registra costos mensuales: alquiler, servicios, sueldos, etc.
+            </Text>
+          </View>
+          <View style={local.filterRow}>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.category_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, category_id: value }))
+                }
+              >
+                <Picker.Item label="Todas las categorias" value="" />
+                {categories.map((cat) => (
+                  <Picker.Item
+                    key={cat.id}
+                    label={cat.name}
+                    value={String(cat.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.status}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, status: value }))
+                }
+              >
+                <Picker.Item label="Todos los estados" value="" />
+                <Picker.Item label="Activo" value="active" />
+                <Picker.Item label="Inactivo" value="inactive" />
+              </Picker>
+            </View>
+          </View>
+        </View>
+      </View>
 
-      {/* Formulario */}
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar gasto fijo" : "Nuevo gasto fijo"}
-        </h2>
-        <p className="card-subtitle">
-          Estos gastos se repiten todos los meses. Más adelante podemos generar
-          reportes comparando con los ingresos.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Estos gastos se repiten todos los meses.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="name">Nombre del gasto</label>
-            <input
-              id="name"
-              type="text"
-              name="name"
-              placeholder="Ej: Alquiler local"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Nombre del gasto</Text>
+            <TextInput
               value={form.name}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("name", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="category">Categoría</label>
-            <select
-              id="category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="amount">Monto mensual (ARS)</label>
-            <input
-              id="amount"
-              type="number"
-              name="amount"
-              min="0"
-              step="100"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Categoria</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.category}
+                onValueChange={(value) => handleChange("category", value)}
+              >
+                <Picker.Item label="Selecciona categoria" value="" />
+                {categories.map((cat) => (
+                  <Picker.Item
+                    key={cat.id}
+                    label={cat.name}
+                    value={String(cat.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Monto mensual</Text>
+            <TextInput
               value={form.amount}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("amount", value)}
+              keyboardType="numeric"
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="dueDay">Día de vencimiento</label>
-            <input
-              id="dueDay"
-              type="number"
-              name="dueDay"
-              min="1"
-              max="31"
-              value={form.dueDay}
-              onChange={handleChange}
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Dia de vencimiento</Text>
+            <TextInput
+              value={String(form.dueDay)}
+              onChangeText={(value) => handleChange("dueDay", value)}
+              keyboardType="numeric"
+              style={shared.input}
             />
-          </div>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Metodo de pago</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.paymentMethod}
+                onValueChange={(value) => handleChange("paymentMethod", value)}
+              >
+                <Picker.Item label="Selecciona metodo" value="" />
+                {paymentMethods.map((method) => (
+                  <Picker.Item
+                    key={method.id}
+                    label={method.name}
+                    value={String(method.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Proveedor</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.supplier}
+                onValueChange={(value) => handleChange("supplier", value)}
+              >
+                <Picker.Item label="Selecciona proveedor" value="" />
+                {suppliers.map((supplier) => (
+                  <Picker.Item
+                    key={supplier.id}
+                    label={supplier.name}
+                    value={String(supplier.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Estado</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.status}
+                onValueChange={(value) => handleChange("status", value)}
+              >
+                <Picker.Item label="Activo" value="active" />
+                <Picker.Item label="Inactivo" value="inactive" />
+              </Picker>
+            </View>
+          </View>
+        </View>
 
-          <div className="form-field">
-            <label htmlFor="paymentMethod">Método de pago</label>
-            <select
-              id="paymentMethod"
-              name="paymentMethod"
-              value={form.paymentMethod}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {paymentMethods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="supplier">Proveedor</label>
-            <select
-              id="supplier"
-              name="supplier"
-              value={form.supplier}
-              onChange={handleChange}
-            >
-              <option value="">Seleccioná</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="status">Estado</label>
-            <select
-              id="status"
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-            >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar gasto fijo"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar gasto fijo"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
+        </View>
+      </View>
 
-        <div className="expenses-total">
-          Total mensual de gastos fijos activos:{" "}
-          <strong>${monthlyTotal.toLocaleString("es-AR")}</strong>
-        </div>
-      </form>
+      <View style={local.totalCard}>
+        <Text style={local.totalLabel}>Total mensual activo</Text>
+        <Text style={local.totalValue}>{formatCurrency(monthlyTotal)}</Text>
+      </View>
 
-      {/* Lista de gastos fijos */}
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de gastos fijos</h2>
-        <p className="card-subtitle">
-          Todos los compromisos mensuales de Bandidos. Te sirve para comparar
-          contra los ingresos del mes.
-        </p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de gastos fijos</Text>
+        <Text style={shared.cardSubtitle}>
+          Gastos fijos registrados.
+        </Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {fixedExpenses.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin gastos fijos cargados.
-            </div>
-          ) : (
-            fixedExpenses.map((e) => (
-              <div
-                key={e.id}
-                className="list-item"
-                onClick={() => setSelectedExpense(e)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{e.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        startEdit(e);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDelete(e.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Categoría: {e.category?.name || e.category_id || "-"}</span>
-                  <span>Monto: {formatCurrency(e.amount)}</span>
-                  <span>Vence: {e.due_day || e.dueDay || "-"}</span>
-                  <span>
-                    Método: {e.payment_method?.name || e.payment_method_id || "-"}
-                  </span>
-                  <span>Proveedor: {e.supplier?.name || e.supplier_id || "-"}</span>
-                  <span>Estado: {e.status === "active" ? "Activo" : "Inactivo"}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {fixedExpenses.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin gastos fijos cargados.
+          </Text>
+        ) : (
+          fixedExpenses.map((expense) => (
+            <Pressable
+              key={expense.id}
+              style={local.listItem}
+              onPress={() => setSelectedExpense(expense)}
+            >
+              <Text style={local.listTitle}>{expense.name || "-"}</Text>
+              <Text style={local.listMeta}>
+                Categoria:{" "}
+                {categoryById.get(String(expense.category_id)) || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Monto: {formatCurrency(expense.amount)}
+              </Text>
+              <Text style={local.listMeta}>
+                Vence dia: {expense.due_day || expense.dueDay || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Metodo:{" "}
+                {paymentById.get(String(expense.payment_method_id)) || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Proveedor:{" "}
+                {supplierById.get(String(expense.supplier_id)) || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Estado: {expense.status || "-"}
+              </Text>
+              <View style={local.listActions}>
+                <Pressable
+                  style={[shared.buttonSecondary, local.smallButton]}
+                  onPress={() => startEdit(expense)}
+                >
+                  <Text style={shared.buttonTextLight}>Editar</Text>
+                </Pressable>
+                <Pressable
+                  style={[shared.buttonDanger, local.smallButton]}
+                  onPress={() => handleDelete(expense.id)}
+                >
+                  <Text style={shared.buttonTextLight}>Eliminar</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedExpense)}
@@ -430,204 +440,286 @@ export default function FixedExpensesPage() {
         title="Detalle del gasto fijo"
       >
         {selectedExpense && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    value={modalForm.name}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Categoría</span>
-                  <select
-                    value={modalForm.category}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
+              <View>
+                <Text style={shared.label}>Nombre</Text>
+                <TextInput
+                  value={modalForm.name}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, name: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Categoria</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.category}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, category: value }))
                     }
                   >
-                    <option value="">Seleccioná</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
+                    <Picker.Item label="Selecciona categoria" value="" />
+                    {categories.map((cat) => (
+                      <Picker.Item
+                        key={cat.id}
+                        label={cat.name}
+                        value={String(cat.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Monto</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={modalForm.amount}
-                    onChange={(e) =>
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Monto</Text>
+                <TextInput
+                  value={modalForm.amount}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, amount: value }))
+                  }
+                  keyboardType="numeric"
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>
+                  Dia de vencimiento
+                </Text>
+                <TextInput
+                  value={String(modalForm.dueDay)}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, dueDay: value }))
+                  }
+                  keyboardType="numeric"
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>
+                  Metodo de pago
+                </Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.paymentMethod}
+                    onValueChange={(value) =>
                       setModalForm((prev) => ({
                         ...prev,
-                        amount: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Vence día</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={modalForm.dueDay}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        dueDay: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Método de pago</span>
-                  <select
-                    value={modalForm.paymentMethod}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        paymentMethod: e.target.value,
+                        paymentMethod: value,
                       }))
                     }
                   >
-                    <option value="">Seleccioná</option>
+                    <Picker.Item label="Selecciona metodo" value="" />
                     {paymentMethods.map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.name}
-                      </option>
+                      <Picker.Item
+                        key={method.id}
+                        label={method.name}
+                        value={String(method.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Proveedor</span>
-                  <select
-                    value={modalForm.supplier}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        supplier: e.target.value,
-                      }))
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Proveedor</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.supplier}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, supplier: value }))
                     }
                   >
-                    <option value="">Seleccioná</option>
+                    <Picker.Item label="Selecciona proveedor" value="" />
                     {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
+                      <Picker.Item
+                        key={supplier.id}
+                        label={supplier.name}
+                        value={String(supplier.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Estado</span>
-                  <select
-                    value={modalForm.status}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        status: e.target.value,
-                      }))
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Estado</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.status}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, status: value }))
                     }
                   >
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                  </select>
-                </label>
-              </>
+                    <Picker.Item label="Activo" value="active" />
+                    <Picker.Item label="Inactivo" value="inactive" />
+                  </Picker>
+                </View>
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Nombre:</strong> {selectedExpense.name || "-"}
-                </div>
-                <div>
-                  <strong>Categoría:</strong>{" "}
-                  {selectedExpense.category?.name ||
-                    selectedExpense.category_id ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
-                </div>
-                <div>
-                  <strong>Vence día:</strong>{" "}
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Nombre: </Text>
+                  {selectedExpense.name || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Categoria: </Text>
+                  {categoryById.get(String(selectedExpense.category_id)) || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Monto: </Text>
+                  {formatCurrency(selectedExpense.amount)}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Vence dia: </Text>
                   {selectedExpense.due_day || selectedExpense.dueDay || "-"}
-                </div>
-                <div>
-                  <strong>Método de pago:</strong>{" "}
-                  {selectedExpense.payment_method?.name ||
-                    selectedExpense.payment_method_id ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Proveedor:</strong>{" "}
-                  {selectedExpense.supplier?.name ||
-                    selectedExpense.supplier_id ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Estado:</strong>{" "}
-                  {selectedExpense.status === "active" ? "Activo" : "Inactivo"}
-                </div>
-              </>
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Metodo: </Text>
+                  {paymentById.get(String(selectedExpense.payment_method_id)) || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Proveedor: </Text>
+                  {supplierById.get(String(selectedExpense.supplier_id)) || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Estado: </Text>
+                  {selectedExpense.status || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedExpense)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedExpense)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedExpense.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+    minWidth: 180,
+  },
+  totalCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  totalValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.text,
+    marginTop: 6,
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  listActions: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

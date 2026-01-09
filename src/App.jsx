@@ -1,6 +1,9 @@
 // src/App.jsx
-import { Routes, Route } from "react-router-dom";
-import MainLayout from "./layouts/MainLayout";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { ActivityIndicator, View } from "react-native";
+import Sidebar from "./components/navigation/Sidebar";
 
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ServicesListPage from "./pages/services/ServicesListPage";
@@ -19,51 +22,100 @@ import PaymentMethodsPage from "./pages/catalog/PaymentMethodsPage";
 import ExpenseCategoriesPage from "./pages/catalog/ExpenseCategoriesPage";
 import UsersPage from "./pages/admin/UsersPage";
 
-import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
+const Stack = createNativeStackNavigator();
+const Drawer = createDrawerNavigator();
+
+function AppDrawer() {
+  const { user } = useAuth();
+
+  return (
+    <Drawer.Navigator
+      drawerContent={(props) => <Sidebar {...props} user={user} />}
+      screenOptions={{ headerShown: true }}
+    >
+      <Drawer.Screen name="Dashboard" component={DashboardPage} options={{ title: "Inicio" }} />
+      <Drawer.Screen name="Services" component={ServicesListPage} options={{ title: "Servicios" }} />
+      <Drawer.Screen name="Customers" component={CustomersPage} options={{ title: "Clientes" }} />
+      <Drawer.Screen name="Pets" component={PetsPage} options={{ title: "Mascotas" }} />
+      <Drawer.Screen name="DailyExpenses" component={DailyExpensesPage} options={{ title: "Gastos diarios" }} />
+      <Drawer.Screen name="FixedExpenses" component={FixedExpensesPage} options={{ title: "Gastos fijos" }} />
+      <Drawer.Screen name="Employees" component={EmployeesPage} options={{ title: "Empleados" }} />
+      <Drawer.Screen name="Suppliers" component={SuppliersPage} options={{ title: "Proveedores" }} />
+      <Drawer.Screen
+        name="ServiceTypes"
+        component={ServiceTypesPage}
+        options={{ title: "Tipos de servicio" }}
+      />
+      <Drawer.Screen
+        name="PaymentMethods"
+        component={PaymentMethodsPage}
+        options={{ title: "Metodos de pago" }}
+      />
+      <Drawer.Screen
+        name="ExpenseCategories"
+        component={ExpenseCategoriesPage}
+        options={{ title: "Categorias gastos" }}
+      />
+      {user?.role === "admin" && (
+        <Drawer.Screen name="Users" component={UsersPage} options={{ title: "Usuarios" }} />
+      )}
+    </Drawer.Navigator>
+  );
+}
+
+function AuthStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordPage}
+        options={{ title: "Recuperar clave" }}
+      />
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordPage}
+        options={{ title: "Restablecer clave" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function RootNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      {user ? (
+        <Stack.Navigator>
+          <Stack.Screen name="Main" component={AppDrawer} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="ServiceForm"
+            component={ServiceFormPage}
+            options={{ title: "Servicio" }}
+          />
+        </Stack.Navigator>
+      ) : (
+        <AuthStack />
+      )}
+    </NavigationContainer>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <MainLayout>
-                <Routes>
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/services" element={<ServicesListPage />} />
-                  <Route path="/services/new" element={<ServiceFormPage />} />
-                  <Route path="/services/:id" element={<ServiceFormPage />} />
-                  <Route path="/customers" element={<CustomersPage />} />
-                  <Route path="/pets" element={<PetsPage />} />
-                  <Route path="/expenses/daily" element={<DailyExpensesPage />} />
-                  <Route path="/expenses/fixed" element={<FixedExpensesPage />} />
-                  <Route path="/employees" element={<EmployeesPage />} />
-                  <Route path="/suppliers" element={<SuppliersPage />} />
-                  <Route
-                    path="/catalog/service-types"
-                    element={<ServiceTypesPage />}
-                  />
-                  <Route
-                    path="/catalog/payment-methods"
-                    element={<PaymentMethodsPage />}
-                  />
-                  <Route
-                    path="/catalog/expense-categories"
-                    element={<ExpenseCategoriesPage />}
-                  />
-                  <Route path="/admin/users" element={<UsersPage />} />
-                </Routes>
-              </MainLayout>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <RootNavigator />
     </AuthProvider>
   );
 }

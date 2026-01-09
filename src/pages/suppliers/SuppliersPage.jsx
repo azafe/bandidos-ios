@@ -1,7 +1,18 @@
-// src/pages/suppliers/SuppliersPage.jsx
 import { useMemo, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function SuppliersPage() {
   const [filters, setFilters] = useState({ q: "", category: "" });
@@ -25,7 +36,10 @@ export default function SuppliersPage() {
     notes: "",
   });
   const paymentMethodById = useMemo(() => {
-    const entries = paymentMethods.map((method) => [method.id, method.name]);
+    const entries = paymentMethods.map((method) => [
+      String(method.id),
+      method.name,
+    ]);
     return new Map(entries);
   }, [paymentMethods]);
 
@@ -42,15 +56,13 @@ export default function SuppliersPage() {
     notes: "",
   });
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.name.trim()) {
-      alert("Ingresá al menos el nombre del proveedor.");
+      Alert.alert("Falta informacion", "Ingresa el nombre del proveedor.");
       return;
     }
 
@@ -68,7 +80,7 @@ export default function SuppliersPage() {
         await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el proveedor.");
+      Alert.alert("Error", err.message || "No se pudo guardar el proveedor.");
       return;
     }
 
@@ -83,13 +95,13 @@ export default function SuppliersPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este proveedor?");
+    const ok = await confirmDelete("¿Eliminar este proveedor?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el proveedor.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el proveedor.");
       return false;
     }
   }
@@ -100,7 +112,7 @@ export default function SuppliersPage() {
       name: supplier.name || "",
       category: supplier.category || "",
       phone: supplier.phone || "",
-      payment: supplier.payment_method_id || "",
+      payment: String(supplier.payment_method_id || ""),
       notes: supplier.notes || "",
     });
   }
@@ -121,7 +133,7 @@ export default function SuppliersPage() {
       name: supplier.name || "",
       category: supplier.category || "",
       phone: supplier.phone || "",
-      payment_method_id: supplier.payment_method_id || "",
+      payment_method_id: String(supplier.payment_method_id || ""),
       notes: supplier.notes || "",
     });
     setIsEditingModal(true);
@@ -130,7 +142,7 @@ export default function SuppliersPage() {
   async function handleModalSave() {
     if (!selectedSupplier) return;
     if (!modalForm.name.trim()) {
-      alert("Ingresá al menos el nombre del proveedor.");
+      Alert.alert("Falta informacion", "Ingresa el nombre del proveedor.");
       return;
     }
     try {
@@ -155,7 +167,7 @@ export default function SuppliersPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el proveedor.");
+      Alert.alert("Error", err.message || "No se pudo guardar el proveedor.");
     }
   }
 
@@ -165,213 +177,153 @@ export default function SuppliersPage() {
   }
 
   return (
-    <div className="page-content">
-      {/* Encabezado */}
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Proveedores</h1>
-          <p className="page-subtitle">
-            Registrá y gestioná los proveedores de Bandidos para tener claro
-            con quién comprás insumos, snacks y servicios.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <input
-            type="text"
-            placeholder="Buscar proveedor..."
-            value={filters.q}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, q: e.target.value }))
-            }
-            style={{
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.12)",
-              padding: "8px 14px",
-              background: "#12131a",
-              color: "#fff",
-              minWidth: 220,
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Filtrar por rubro..."
-            value={filters.category}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, category: e.target.value }))
-            }
-            style={{
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.12)",
-              padding: "8px 14px",
-              background: "#12131a",
-              color: "#fff",
-              minWidth: 200,
-            }}
-          />
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Proveedores</Text>
+            <Text style={shared.pageSubtitle}>
+              Registra y gestiona proveedores para insumos y servicios.
+            </Text>
+          </View>
+          <View style={local.filterRow}>
+            <TextInput
+              value={filters.q}
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, q: value }))
+              }
+              placeholder="Buscar proveedor..."
+              placeholderTextColor={colors.textMuted}
+              style={[shared.pillInput, local.filterInput]}
+            />
+            <TextInput
+              value={filters.category}
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, category: value }))
+              }
+              placeholder="Filtrar por rubro..."
+              placeholderTextColor={colors.textMuted}
+              style={[shared.pillInput, local.filterInput]}
+            />
+          </View>
+        </View>
+      </View>
 
-      {/* Formulario */}
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar proveedor" : "Nuevo proveedor"}
-        </h2>
-        <p className="card-subtitle">
-          Completá los datos básicos. Más adelante podemos sumar CUIT, dirección
-          y condiciones de pago.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Completa los datos basicos del proveedor.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="name">Nombre del proveedor</label>
-            <input
-              id="name"
-              type="text"
-              name="name"
-              placeholder="Ej: Pet Shop Tucumán"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Nombre</Text>
+            <TextInput
               value={form.name}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("name", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="category">Rubro</label>
-            <input
-              id="category"
-              type="text"
-              name="category"
-              placeholder="Ej: Insumos, Veterinaria, Snacks"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Rubro</Text>
+            <TextInput
               value={form.category}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("category", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="phone">Teléfono</label>
-            <input
-              id="phone"
-              type="text"
-              name="phone"
-              placeholder="Ej: 381-555-5555"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Telefono</Text>
+            <TextInput
               value={form.phone}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("phone", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="payment">Método de pago preferido</label>
-            <select
-              id="payment"
-              name="payment"
-              value={form.payment}
-              onChange={handleChange}
-            >
-              <option value="">Seleccioná</option>
-              {paymentMethods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field form-field--full">
-            <label htmlFor="notes">Notas</label>
-            <textarea
-              id="notes"
-              name="notes"
-              placeholder="Observaciones, horarios, descuentos, etc."
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Metodo de pago</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.payment}
+                onValueChange={(value) => handleChange("payment", value)}
+              >
+                <Picker.Item label="Selecciona metodo" value="" />
+                {paymentMethods.map((method) => (
+                  <Picker.Item
+                    key={method.id}
+                    label={method.name}
+                    value={String(method.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formFieldFull}>
+            <Text style={shared.label}>Notas</Text>
+            <TextInput
               value={form.notes}
-              onChange={handleChange}
-              rows={3}
+              onChangeText={(value) => handleChange("notes", value)}
+              multiline
+              numberOfLines={3}
+              style={[shared.input, local.textArea]}
             />
-          </div>
-        </div>
+          </View>
+        </View>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar proveedor"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar proveedor"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
-      </form>
+        </View>
+      </View>
 
-      {/* Tabla de proveedores */}
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de proveedores</h2>
-        <p className="card-subtitle">
-          Vista rápida de todos los proveedores con los que trabaja Bandidos.
-        </p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de proveedores</Text>
+        <Text style={shared.cardSubtitle}>Proveedores registrados.</Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {suppliers.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin proveedores cargados.
-            </div>
-          ) : (
-            suppliers.map((s) => (
-              <div
-                key={s.id}
-                className="list-item"
-                onClick={() => setSelectedSupplier(s)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{s.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(s);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(s.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Rubro: {s.category || "-"}</span>
-                  <span>Tel: {s.phone || "-"}</span>
-                  <span>
-                    Pago:{" "}
-                    {s.payment_method?.name ||
-                      paymentMethodById.get(s.payment_method_id) ||
-                      "-"}
-                  </span>
-                </div>
-                {s.notes && (
-                  <div className="list-item__meta">
-                    <span>Notas: {truncate(s.notes, 80)}</span>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {suppliers.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin proveedores cargados.
+          </Text>
+        ) : (
+          suppliers.map((s) => (
+            <Pressable
+              key={s.id}
+              style={local.listItem}
+              onPress={() => setSelectedSupplier(s)}
+            >
+              <Text style={local.listTitle}>{s.name}</Text>
+              <Text style={local.listMeta}>Rubro: {s.category || "-"}</Text>
+              <Text style={local.listMeta}>Telefono: {s.phone || "-"}</Text>
+              <Text style={local.listMeta}>
+                Metodo:{" "}
+                {paymentMethodById.get(String(s.payment_method_id)) || "-"}
+              </Text>
+              {s.notes && (
+                <Text style={local.listMeta}>
+                  Notas: {truncate(s.notes, 80)}
+                </Text>
+              )}
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedSupplier)}
@@ -379,146 +331,222 @@ export default function SuppliersPage() {
         title="Detalle del proveedor"
       >
         {selectedSupplier && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    value={modalForm.name}
-                    onChange={(e) =>
+              <View>
+                <Text style={shared.label}>Nombre</Text>
+                <TextInput
+                  value={modalForm.name}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, name: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Rubro</Text>
+                <TextInput
+                  value={modalForm.category}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, category: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Telefono</Text>
+                <TextInput
+                  value={modalForm.phone}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, phone: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>
+                  Metodo de pago
+                </Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.payment_method_id}
+                    onValueChange={(value) =>
                       setModalForm((prev) => ({
                         ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Rubro</span>
-                  <input
-                    type="text"
-                    value={modalForm.category}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Teléfono</span>
-                  <input
-                    type="text"
-                    value={modalForm.phone}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        phone: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Método de pago</span>
-                  <select
-                    value={modalForm.payment_method_id}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        payment_method_id: e.target.value,
+                        payment_method_id: value,
                       }))
                     }
                   >
-                    <option value="">Seleccioná</option>
+                    <Picker.Item label="Selecciona metodo" value="" />
                     {paymentMethods.map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.name}
-                      </option>
+                      <Picker.Item
+                        key={method.id}
+                        label={method.name}
+                        value={String(method.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Notas</span>
-                  <textarea
-                    rows={3}
-                    value={modalForm.notes}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        notes: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              </>
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Notas</Text>
+                <TextInput
+                  value={modalForm.notes}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, notes: value }))
+                  }
+                  multiline
+                  numberOfLines={3}
+                  style={[shared.input, local.textArea]}
+                />
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Nombre:</strong> {selectedSupplier.name || "-"}
-                </div>
-                <div>
-                  <strong>Rubro:</strong> {selectedSupplier.category || "-"}
-                </div>
-                <div>
-                  <strong>Teléfono:</strong> {selectedSupplier.phone || "-"}
-                </div>
-                <div>
-                  <strong>Método de pago:</strong>{" "}
-                  {selectedSupplier.payment_method?.name ||
-                    paymentMethodById.get(selectedSupplier.payment_method_id) ||
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Nombre: </Text>
+                  {selectedSupplier.name || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Rubro: </Text>
+                  {selectedSupplier.category || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Telefono: </Text>
+                  {selectedSupplier.phone || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Metodo: </Text>
+                  {paymentMethodById.get(String(selectedSupplier.payment_method_id)) ||
                     "-"}
-                </div>
-                <div>
-                  <strong>Notas:</strong> {selectedSupplier.notes || "-"}
-                </div>
-              </>
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Notas: </Text>
+                  {selectedSupplier.notes || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedSupplier)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedSupplier)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedSupplier.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  filterInput: {
+    minWidth: 200,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formFieldFull: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  textArea: {
+    height: 90,
+    textAlignVertical: "top",
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

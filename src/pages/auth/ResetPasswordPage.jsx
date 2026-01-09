@@ -1,129 +1,133 @@
-// src/pages/auth/ResetPasswordPage.jsx
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { colors, styles as shared } from "../../styles/native";
 
 export default function ResetPasswordPage() {
   const [form, setForm] = useState({ password: "", confirm: "" });
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const email = params.get("email");
+  const navigation = useNavigation();
+  const route = useRoute();
+  const email = route.params?.email;
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.password || !form.confirm) {
-      alert("Completá ambos campos.");
+      Alert.alert("Falta informacion", "Completa ambos campos.");
       return;
     }
     if (form.password !== form.confirm) {
-      alert("Las contraseñas no coinciden.");
+      Alert.alert("Error", "Las contrasenas no coinciden.");
       return;
     }
 
     try {
       setSubmitting(true);
-      // TODO: reemplazar por llamada real al backend de reseteo.
-      alert("Contraseña actualizada.");
-      navigate("/login");
+      Alert.alert("Listo", "Contrasena actualizada.");
+      navigation.navigate("Login");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "radial-gradient(circle at top left, #262938, #111217 55%)",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          padding: "24px 28px",
-          borderRadius: "16px",
-          boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-          maxWidth: "380px",
-          width: "100%",
-        }}
+    <View style={local.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={local.card}
       >
-        <h1
-          style={{
-            fontFamily: "Fredoka, system-ui, sans-serif",
-            fontSize: "1.4rem",
-            marginBottom: "8px",
-          }}
+        <Text style={local.title}>Nueva contrasena</Text>
+        <Text style={local.subtitle}>
+          {email ? `Restableciendo para ${email}` : "Elegi tu nueva contrasena."}
+        </Text>
+
+        <Text style={shared.label}>Nueva contrasena</Text>
+        <TextInput
+          value={form.password}
+          onChangeText={(value) => handleChange("password", value)}
+          placeholder="••••••••"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry
+          style={shared.input}
+        />
+
+        <Text style={[shared.label, { marginTop: 12 }]}>
+          Confirmar contrasena
+        </Text>
+        <TextInput
+          value={form.confirm}
+          onChangeText={(value) => handleChange("confirm", value)}
+          placeholder="••••••••"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry
+          style={shared.input}
+        />
+
+        <Pressable
+          style={[shared.buttonPrimary, local.submitButton]}
+          onPress={handleSubmit}
+          disabled={submitting}
         >
-          Nueva contraseña
-        </h1>
-        <p style={{ fontSize: "0.9rem", marginBottom: "18px" }}>
-          {email ? `Restableciendo para ${email}` : "Elegí tu nueva contraseña."}
-        </p>
+          <Text style={shared.buttonText}>
+            {submitting ? "Guardando..." : "Actualizar contrasena"}
+          </Text>
+        </Pressable>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
-            Nueva contraseña
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-              required
-            />
-          </label>
-
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
-            Confirmar contraseña
-            <input
-              name="confirm"
-              type="password"
-              value={form.confirm}
-              onChange={handleChange}
-              placeholder="••••••••"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-              required
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={submitting}
-          >
-            {submitting ? "Guardando..." : "Actualizar contraseña"}
-          </button>
-        </form>
-
-        <div style={{ marginTop: 12 }}>
-          <Link to="/login" style={{ fontSize: "0.85rem", color: "#4a4a4a" }}>
-            Volver al inicio de sesión
-          </Link>
-        </div>
-      </div>
-    </div>
+        <Pressable onPress={() => navigation.navigate("Login")}>
+          <Text style={local.footerLink}>Volver al inicio de sesion</Text>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+const local = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  submitButton: {
+    marginTop: 16,
+  },
+  footerLink: {
+    marginTop: 16,
+    textAlign: "center",
+    color: colors.primary,
+    fontWeight: "600",
+  },
+});

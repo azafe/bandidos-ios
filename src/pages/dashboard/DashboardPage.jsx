@@ -1,8 +1,10 @@
-// src/pages/dashboard/DashboardPage.jsx
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
@@ -24,6 +26,7 @@ function pickNumber(summary, keys) {
 }
 
 export default function DashboardPage() {
+  const navigation = useNavigation();
   const today = new Date();
   const formattedDate = today.toLocaleDateString("es-AR", {
     weekday: "long",
@@ -93,201 +96,192 @@ export default function DashboardPage() {
   }, [summary]);
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Inicio</h1>
-          <p className="page-subtitle">
-            Resumen del negocio de Bandidos · {formattedDate}
-          </p>
-        </div>
-        <Link to="/services/new">
-          <button className="btn-primary">+ Registrar servicio</button>
-        </Link>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Inicio</Text>
+            <Text style={shared.pageSubtitle}>
+              Resumen del negocio de Bandidos · {formattedDate}
+            </Text>
+          </View>
+          <Pressable
+            style={[shared.buttonPrimary, local.headerButton]}
+            onPress={() => navigation.navigate("ServiceForm", { id: null })}
+          >
+            <Text style={shared.buttonText}>+ Registrar servicio</Text>
+          </Pressable>
+        </View>
+      </View>
 
-      {/* KPIs principales */}
-      <section className="kpi-grid">
-        <div className="kpi-card">
-          <span className="kpi-label">Ingresos del período</span>
-          <span className="kpi-value">
+      <View style={local.kpiGrid}>
+        <View style={[shared.card, local.kpiCard]}>
+          <Text style={local.kpiLabel}>Ingresos del periodo</Text>
+          <Text style={local.kpiValue}>
             ${kpis.income.toLocaleString("es-AR")}
-          </span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Gastos del período</span>
-          <span className="kpi-value">
+          </Text>
+        </View>
+        <View style={[shared.card, local.kpiCard]}>
+          <Text style={local.kpiLabel}>Gastos del periodo</Text>
+          <Text style={local.kpiValue}>
             ${kpis.expenses.toLocaleString("es-AR")}
-          </span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Gastos fijos</span>
-          <span className="kpi-value">
+          </Text>
+        </View>
+        <View style={[shared.card, local.kpiCard]}>
+          <Text style={local.kpiLabel}>Gastos fijos</Text>
+          <Text style={local.kpiValue}>
             ${kpis.fixed.toLocaleString("es-AR")}
-          </span>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-label">Servicios del período</span>
-          <span className="kpi-value">{kpis.services}</span>
-        </div>
-      </section>
+          </Text>
+        </View>
+        <View style={[shared.card, local.kpiCard]}>
+          <Text style={local.kpiLabel}>Servicios del periodo</Text>
+          <Text style={local.kpiValue}>{kpis.services}</Text>
+        </View>
+      </View>
 
-      {/* Grilla de tarjetas */}
-      <section className="dashboard-grid">
-        {/* Resumen diario */}
-        <div className="card">
-          <h2 className="card-title">Resumen diario</h2>
-          <p className="card-subtitle">
-            Reporte por día para el rango seleccionado.
-          </p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Resumen diario</Text>
+        <Text style={shared.cardSubtitle}>
+          Reporte por dia para el rango seleccionado.
+        </Text>
 
-          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            <label className="form-field">
-              <span>Desde</span>
-              <input
-                type="date"
-                value={range.from}
-                onChange={(e) =>
-                  setRange((prev) => ({ ...prev, from: e.target.value }))
-                }
-              />
-            </label>
-            <label className="form-field">
-              <span>Hasta</span>
-              <input
-                type="date"
-                value={range.to}
-                onChange={(e) =>
-                  setRange((prev) => ({ ...prev, to: e.target.value }))
-                }
-              />
-            </label>
-          </div>
+        <View style={local.formRow}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Desde</Text>
+            <TextInput
+              value={range.from}
+              onChangeText={(value) =>
+                setRange((prev) => ({ ...prev, from: value }))
+              }
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textMuted}
+              style={shared.input}
+            />
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Hasta</Text>
+            <TextInput
+              value={range.to}
+              onChangeText={(value) =>
+                setRange((prev) => ({ ...prev, to: value }))
+              }
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textMuted}
+              style={shared.input}
+            />
+          </View>
+        </View>
 
-          {loading ? (
-            <div className="card-subtitle">Cargando reportes...</div>
-          ) : error ? (
-            <div className="card-subtitle" style={{ color: "#f37b7b" }}>
-              {error}
-            </div>
-          ) : (
-            <div className="list-wrapper">
-              {daily.length === 0 ? (
-                <div className="card-subtitle" style={{ textAlign: "center" }}>
-                  No hay datos para el rango seleccionado.
-                </div>
-              ) : (
-                daily.map((row, index) => {
-                  const dateLabel = row.date || row.day || "-";
-                  const income =
-                    row.income || row.total_income || row.totalIncome || 0;
-                  const expenses =
-                    row.expenses ||
-                    row.total_expenses ||
-                    row.totalExpenses ||
-                    0;
-                  const services = row.services || row.total_services || 0;
-                  return (
-                    <div
-                      key={row.date || index}
-                      className="list-item"
-                      onClick={() =>
-                        setSelectedReport({
-                          dateLabel,
-                          income,
-                          expenses,
-                          services,
-                        })
-                      }
-                    >
-                      <div className="list-item__header">
-                        <div className="list-item__title">{dateLabel}</div>
-                      </div>
-                      <div className="list-item__meta">
-                        <span>
-                          Ingresos: ${Number(income).toLocaleString("es-AR")}
-                        </span>
-                        <span>
-                          Gastos: ${Number(expenses).toLocaleString("es-AR")}
-                        </span>
-                        <span>Servicios: {services}</span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <Text style={shared.cardSubtitle}>Cargando reportes...</Text>
+        ) : error ? (
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
+            {error}
+          </Text>
+        ) : (
+          <View style={local.list}>
+            {daily.length === 0 ? (
+              <Text style={[shared.cardSubtitle, local.centerText]}>
+                No hay datos para el rango seleccionado.
+              </Text>
+            ) : (
+              daily.map((row, index) => {
+                const dateLabel = row.date || row.day || "-";
+                const income =
+                  row.income || row.total_income || row.totalIncome || 0;
+                const expenses =
+                  row.expenses ||
+                  row.total_expenses ||
+                  row.totalExpenses ||
+                  0;
+                const services = row.services || row.total_services || 0;
+                return (
+                  <Pressable
+                    key={row.date || index}
+                    style={local.listItem}
+                    onPress={() =>
+                      setSelectedReport({
+                        dateLabel,
+                        income,
+                        expenses,
+                        services,
+                      })
+                    }
+                  >
+                    <Text style={local.listTitle}>{dateLabel}</Text>
+                    <Text style={local.listMeta}>
+                      Ingresos: ${Number(income).toLocaleString("es-AR")}
+                    </Text>
+                    <Text style={local.listMeta}>
+                      Gastos: ${Number(expenses).toLocaleString("es-AR")}
+                    </Text>
+                    <Text style={local.listMeta}>Servicios: {services}</Text>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        )}
+      </View>
 
-        {/* Accesos rápidos */}
-        <div className="card">
-          <h2 className="card-title">Accesos rápidos</h2>
-          <p className="card-subtitle">Tareas frecuentes de Bandidos</p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Accesos rapidos</Text>
+        <Text style={shared.cardSubtitle}>Tareas frecuentes de Bandidos</Text>
 
-          <div className="quick-actions">
-            <div className="quick-actions__item">
-              <div>
-                <div className="quick-actions__label">
-                  Registrar nuevo servicio
-                </div>
-                <div className="quick-actions__hint">
-                  Baño, corte o completo
-                </div>
-              </div>
-              <Link to="/services/new">
-                <button className="btn-primary" style={{ padding: "6px 14px" }}>
-                  Ir
-                </button>
-              </Link>
-            </div>
+        <View style={local.quickActions}>
+          <View style={local.quickItem}>
+            <View style={local.quickInfo}>
+              <Text style={local.quickLabel}>Registrar nuevo servicio</Text>
+              <Text style={local.quickHint}>Bano, corte o completo</Text>
+            </View>
+            <Pressable
+              style={[shared.buttonPrimary, local.smallButton]}
+              onPress={() => navigation.navigate("ServiceForm", { id: null })}
+            >
+              <Text style={shared.buttonText}>Ir</Text>
+            </Pressable>
+          </View>
 
-            <div className="quick-actions__item">
-              <div>
-                <div className="quick-actions__label">Ver servicios</div>
-                <div className="quick-actions__hint">
-                  Historial de perros atendidos
-                </div>
-              </div>
-              <Link to="/services">
-                <button className="btn-secondary" style={{ padding: "6px 14px" }}>
-                  Abrir
-                </button>
-              </Link>
-            </div>
+          <View style={local.quickItem}>
+            <View style={local.quickInfo}>
+              <Text style={local.quickLabel}>Ver servicios</Text>
+              <Text style={local.quickHint}>Historial de perros atendidos</Text>
+            </View>
+            <Pressable
+              style={[shared.buttonSecondary, local.smallButton]}
+              onPress={() => navigation.navigate("Services")}
+            >
+              <Text style={shared.buttonTextLight}>Abrir</Text>
+            </Pressable>
+          </View>
 
-            <div className="quick-actions__item">
-              <div>
-                <div className="quick-actions__label">Registrar gasto diario</div>
-                <div className="quick-actions__hint">
-                  Shampoo, limpieza, snacks
-                </div>
-              </div>
-              <Link to="/expenses/daily">
-                <button className="btn-secondary" style={{ padding: "6px 14px" }}>
-                  Abrir
-                </button>
-              </Link>
-            </div>
+          <View style={local.quickItem}>
+            <View style={local.quickInfo}>
+              <Text style={local.quickLabel}>Registrar gasto diario</Text>
+              <Text style={local.quickHint}>Shampoo, limpieza, snacks</Text>
+            </View>
+            <Pressable
+              style={[shared.buttonSecondary, local.smallButton]}
+              onPress={() => navigation.navigate("DailyExpenses")}
+            >
+              <Text style={shared.buttonTextLight}>Abrir</Text>
+            </Pressable>
+          </View>
 
-            <div className="quick-actions__item">
-              <div>
-                <div className="quick-actions__label">
-                  Gastos fijos del mes
-                </div>
-                <div className="quick-actions__hint">
-                  Alquiler, servicios, sueldos
-                </div>
-              </div>
-              <Link to="/expenses/fixed">
-                <button className="btn-secondary" style={{ padding: "6px 14px" }}>
-                  Abrir
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+          <View style={local.quickItem}>
+            <View style={local.quickInfo}>
+              <Text style={local.quickLabel}>Gastos fijos del mes</Text>
+              <Text style={local.quickHint}>Alquiler, servicios, sueldos</Text>
+            </View>
+            <Pressable
+              style={[shared.buttonSecondary, local.smallButton]}
+              onPress={() => navigation.navigate("FixedExpenses")}
+            >
+              <Text style={shared.buttonTextLight}>Abrir</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
 
       <Modal
         isOpen={Boolean(selectedReport)}
@@ -295,24 +289,131 @@ export default function DashboardPage() {
         title="Detalle del reporte diario"
       >
         {selectedReport && (
-          <>
-            <div>
-              <strong>Fecha:</strong> {selectedReport.dateLabel}
-            </div>
-            <div>
-              <strong>Ingresos:</strong>{" "}
-              ${Number(selectedReport.income).toLocaleString("es-AR")}
-            </div>
-            <div>
-              <strong>Gastos:</strong>{" "}
-              ${Number(selectedReport.expenses).toLocaleString("es-AR")}
-            </div>
-            <div>
-              <strong>Servicios:</strong> {selectedReport.services}
-            </div>
-          </>
+          <View>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Fecha: </Text>
+              {selectedReport.dateLabel}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Ingresos: </Text>$
+              {Number(selectedReport.income).toLocaleString("es-AR")}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Gastos: </Text>$
+              {Number(selectedReport.expenses).toLocaleString("es-AR")}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Servicios: </Text>
+              {selectedReport.services}
+            </Text>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  headerButton: {
+    marginTop: 12,
+  },
+  kpiGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 8,
+  },
+  kpiCard: {
+    flexBasis: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  kpiLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  kpiValue: {
+    marginTop: 8,
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  formRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  list: {
+    marginTop: 12,
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    color: colors.text,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  listMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  centerText: {
+    textAlign: "center",
+  },
+  quickActions: {
+    marginTop: 12,
+  },
+  quickItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  quickInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  quickLabel: {
+    color: colors.text,
+    fontWeight: "600",
+  },
+  quickHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+});

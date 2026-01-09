@@ -1,146 +1,114 @@
 // src/components/navigation/Sidebar.jsx
-import { NavLink } from "react-router-dom";
+import { DrawerContentScrollView, DrawerItem } from "@react-navigation/drawer";
+import { Image, StyleSheet, Text, View } from "react-native";
 import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
 
-export default function Sidebar({ isOpen = true, onNavigate }) {
-  const { user, logout } = useAuth();
-  const handleNavigate = () => {
-    if (onNavigate) onNavigate();
-  };
+const NAV_ITEMS = [
+  { label: "Inicio", route: "Dashboard" },
+  { label: "Servicios", route: "Services" },
+  { label: "Clientes", route: "Customers" },
+  { label: "Mascotas", route: "Pets" },
+  { label: "Gastos diarios", route: "DailyExpenses" },
+  { label: "Gastos fijos", route: "FixedExpenses" },
+  { label: "Tipos de servicio", route: "ServiceTypes" },
+  { label: "Metodos de pago", route: "PaymentMethods" },
+  { label: "Categorias gastos", route: "ExpenseCategories" },
+  { label: "Empleados", route: "Employees" },
+  { label: "Proveedores", route: "Suppliers" },
+];
 
-  const makeClassName = (isActive) =>
-    "sidebar__nav-link" + (isActive ? " sidebar__nav-link--active" : "");
+export default function Sidebar(props) {
+  const { navigation, user } = props;
+  const { logout } = useAuth();
 
   return (
-    <aside className={`sidebar ${isOpen ? "sidebar--open" : ""}`}>
-      <div className="sidebar__brand">
-        <div className="sidebar__logo-circle">
-          <img
-            src={logo}
-            alt="Bandidos Logo"
-            className="sidebar__logo-img"
+    <DrawerContentScrollView {...props} contentContainerStyle={styles.container}>
+      <View style={styles.brand}>
+        <View style={styles.logoCircle}>
+          <Image source={logo} style={styles.logoImg} resizeMode="cover" />
+        </View>
+        <View style={styles.brandText}>
+          <Text style={styles.brandTitle}>Bandidos</Text>
+          <Text style={styles.brandSubtitle}>Peluqueria Canina</Text>
+        </View>
+      </View>
+
+      <View style={styles.nav}>
+        {NAV_ITEMS.map((item) => (
+          <DrawerItem
+            key={item.route}
+            label={item.label}
+            onPress={() => navigation.navigate(item.route)}
+            labelStyle={styles.navLabel}
           />
-        </div>
-        <div className="sidebar__brand-text">
-          <span className="sidebar__brand-title">Bandidos</span>
-          <span className="sidebar__brand-subtitle">Peluquería Canina</span>
-        </div>
-      </div>
-
-      <nav className="sidebar__nav">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Inicio
-        </NavLink>
-
-        <NavLink
-          to="/services"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Servicios
-        </NavLink>
-
-        <NavLink
-          to="/customers"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Clientes
-        </NavLink>
-
-        <NavLink
-          to="/pets"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Mascotas
-        </NavLink>
-
-        <NavLink
-          to="/expenses/daily"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Gastos diarios
-        </NavLink>
-
-        <NavLink
-          to="/expenses/fixed"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Gastos fijos
-        </NavLink>
-
-        <NavLink
-          to="/catalog/service-types"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Tipos de servicio
-        </NavLink>
-
-        <NavLink
-          to="/catalog/payment-methods"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Métodos de pago
-        </NavLink>
-
-        <NavLink
-          to="/catalog/expense-categories"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Categorías gastos
-        </NavLink>
-
-        <NavLink
-          to="/employees"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Empleados
-        </NavLink>
-
-        <NavLink
-          to="/suppliers"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Proveedores
-        </NavLink>
-
+        ))}
         {user?.role === "admin" && (
-          <NavLink
-            to="/admin/users"
-            className={({ isActive }) => makeClassName(isActive)}
-            onClick={handleNavigate}
-          >
-            Usuarios
-          </NavLink>
+          <DrawerItem
+            label="Usuarios"
+            onPress={() => navigation.navigate("Users")}
+            labelStyle={styles.navLabel}
+          />
         )}
-      </nav>
+      </View>
 
-      <div className="sidebar__nav" style={{ marginTop: "auto" }}>
-        <button
-          type="button"
-          className="sidebar__nav-link"
-          onClick={() => {
-            logout();
-            handleNavigate();
-          }}
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    </aside>
+      <View style={styles.footer}>
+        <DrawerItem
+          label="Cerrar sesion"
+          onPress={logout}
+          labelStyle={styles.logoutLabel}
+        />
+      </View>
+    </DrawerContentScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    paddingBottom: 24,
+  },
+  brand: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "#0f1117",
+  },
+  logoImg: {
+    width: "100%",
+    height: "100%",
+  },
+  brandText: {
+    marginLeft: 12,
+  },
+  brandTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  brandSubtitle: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  nav: {
+    paddingHorizontal: 4,
+  },
+  navLabel: {
+    fontSize: 14,
+  },
+  footer: {
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
+  logoutLabel: {
+    fontSize: 14,
+    color: "#b91c1c",
+  },
+});

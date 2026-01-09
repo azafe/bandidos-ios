@@ -1,7 +1,19 @@
 import { useMemo, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
 import { useAuth } from "../../context/AuthContext";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function PetsPage() {
   const [filters, setFilters] = useState({ customer_id: "", q: "" });
@@ -27,7 +39,10 @@ export default function PetsPage() {
   });
   const isAdmin = user?.role === "admin";
   const customerById = useMemo(() => {
-    const entries = customers.map((customer) => [customer.id, customer.name]);
+    const entries = customers.map((customer) => [
+      String(customer.id),
+      customer.name,
+    ]);
     return new Map(entries);
   }, [customers]);
 
@@ -44,38 +59,31 @@ export default function PetsPage() {
     notes: "",
   });
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.name.trim() || !form.customer_id) {
-      alert("Ingresá nombre y cliente.");
+      Alert.alert("Falta informacion", "Ingresa nombre y cliente.");
       return;
     }
 
     try {
+      const payload = {
+        customer_id: form.customer_id,
+        name: form.name.trim(),
+        breed: form.breed.trim(),
+        size: form.size.trim(),
+        notes: form.notes.trim(),
+      };
       if (editingId) {
-        await updateItem(editingId, {
-          customer_id: form.customer_id,
-          name: form.name.trim(),
-          breed: form.breed.trim(),
-          size: form.size.trim(),
-          notes: form.notes.trim(),
-        });
+        await updateItem(editingId, payload);
       } else {
-        await createItem({
-          customer_id: form.customer_id,
-          name: form.name.trim(),
-          breed: form.breed.trim(),
-          size: form.size.trim(),
-          notes: form.notes.trim(),
-        });
+        await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar la mascota.");
+      Alert.alert("Error", err.message || "No se pudo guardar la mascota.");
       return;
     }
 
@@ -90,20 +98,20 @@ export default function PetsPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar esta mascota?");
+    const ok = await confirmDelete("¿Eliminar esta mascota?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar la mascota.");
+      Alert.alert("Error", err.message || "No se pudo eliminar la mascota.");
       return false;
     }
   }
 
   function openModalEdit(pet) {
     setModalForm({
-      customer_id: pet.customer_id || "",
+      customer_id: String(pet.customer_id || ""),
       name: pet.name || "",
       breed: pet.breed || "",
       size: pet.size || "",
@@ -115,7 +123,7 @@ export default function PetsPage() {
   async function handleModalSave() {
     if (!selectedPet) return;
     if (!modalForm.name.trim() || !modalForm.customer_id) {
-      alert("Ingresá nombre y cliente.");
+      Alert.alert("Falta informacion", "Ingresa nombre y cliente.");
       return;
     }
     try {
@@ -140,7 +148,7 @@ export default function PetsPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar la mascota.");
+      Alert.alert("Error", err.message || "No se pudo guardar la mascota.");
     }
   }
 
@@ -152,7 +160,7 @@ export default function PetsPage() {
   function startEdit(pet) {
     setEditingId(pet.id);
     setForm({
-      customer_id: pet.customer_id || "",
+      customer_id: String(pet.customer_id || ""),
       name: pet.name || "",
       breed: pet.breed || "",
       size: pet.size || "",
@@ -172,178 +180,176 @@ export default function PetsPage() {
   }
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Mascotas</h1>
-          <p className="page-subtitle">
-            Registro de perros y datos básicos.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <select
-            value={filters.customer_id}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, customer_id: e.target.value }))
-            }
-          >
-            <option value="">Todos los clientes</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Buscar por nombre o raza..."
-            value={filters.q}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, q: e.target.value }))
-            }
-            style={{
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.12)",
-              padding: "8px 14px",
-              background: "#12131a",
-              color: "#fff",
-              minWidth: 240,
-            }}
-          />
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Mascotas</Text>
+            <Text style={shared.pageSubtitle}>
+              Registro de perros y datos basicos.
+            </Text>
+          </View>
+          <View style={local.filterRow}>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.customer_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, customer_id: value }))
+                }
+              >
+                <Picker.Item label="Todos los clientes" value="" />
+                {customers.map((customer) => (
+                  <Picker.Item
+                    key={customer.id}
+                    label={customer.name}
+                    value={String(customer.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+            <TextInput
+              value={filters.q}
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, q: value }))
+              }
+              placeholder="Buscar por nombre o raza..."
+              placeholderTextColor={colors.textMuted}
+              style={[shared.pillInput, local.searchInput]}
+            />
+          </View>
+        </View>
+      </View>
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar mascota" : "Nueva mascota"}
-        </h2>
-        <p className="card-subtitle">
-          Asociá la mascota con su dueño para reportes y servicios.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Vincula cada mascota con su dueno.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="customer_id">Cliente</label>
-            <select
-              id="customer_id"
-              name="customer_id"
-              value={form.customer_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="name">Nombre</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Cliente</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.customer_id}
+                onValueChange={(value) => handleChange("customer_id", value)}
+              >
+                <Picker.Item label="Selecciona cliente" value="" />
+                {customers.map((customer) => (
+                  <Picker.Item
+                    key={customer.id}
+                    label={customer.name}
+                    value={String(customer.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Nombre</Text>
+            <TextInput
               value={form.name}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("name", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="breed">Raza</label>
-            <input
-              id="breed"
-              name="breed"
-              type="text"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Raza</Text>
+            <TextInput
               value={form.breed}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("breed", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="size">Tamaño</label>
-            <input
-              id="size"
-              name="size"
-              type="text"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Tamano</Text>
+            <TextInput
               value={form.size}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("size", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field form-field--full">
-            <label htmlFor="notes">Notas</label>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={3}
+          </View>
+          <View style={local.formFieldFull}>
+            <Text style={shared.label}>Notas</Text>
+            <TextInput
               value={form.notes}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("notes", value)}
+              multiline
+              numberOfLines={3}
+              style={[shared.input, local.textArea]}
             />
-          </div>
-        </div>
+          </View>
+        </View>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar mascota"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar mascota"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
-      </form>
+        </View>
+      </View>
 
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de mascotas</h2>
-        <p className="card-subtitle">Mascotas registradas en Bandidos.</p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de mascotas</Text>
+        <Text style={shared.cardSubtitle}>Mascotas registradas.</Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {pets.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin mascotas cargadas.
-            </div>
-          ) : (
-            pets.map((pet) => (
-              <div
-                key={pet.id}
-                className="list-item"
-                onClick={() => setSelectedPet(pet)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{pet.name}</div>
-                </div>
-                <div className="list-item__meta">
-                  <span>
-                    Cliente:{" "}
-                    {pet.customer?.name ||
-                      customerById.get(pet.customer_id) ||
-                      "-"}
-                  </span>
-                  <span>Raza: {pet.breed || "-"}</span>
-                  <span>Tamaño: {pet.size || "-"}</span>
-                </div>
-                {pet.notes && (
-                  <div className="list-item__meta">
-                    <span>Notas: {truncate(pet.notes, 80)}</span>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {pets.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin mascotas cargadas.
+          </Text>
+        ) : (
+          pets.map((pet) => (
+            <Pressable
+              key={pet.id}
+              style={local.listItem}
+              onPress={() => setSelectedPet(pet)}
+            >
+              <Text style={local.listTitle}>{pet.name}</Text>
+              <Text style={local.listMeta}>
+                Dueno: {customerById.get(String(pet.customer_id)) || "-"}
+              </Text>
+              <Text style={local.listMeta}>Raza: {pet.breed || "-"}</Text>
+              <Text style={local.listMeta}>Tamano: {pet.size || "-"}</Text>
+              {pet.notes && (
+                <Text style={local.listMeta}>
+                  Notas: {truncate(pet.notes, 80)}
+                </Text>
+              )}
+              {isAdmin && (
+                <View style={local.listActions}>
+                  <Pressable
+                    style={[shared.buttonSecondary, local.smallButton]}
+                    onPress={() => startEdit(pet)}
+                  >
+                    <Text style={shared.buttonTextLight}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.smallButton]}
+                    onPress={() => handleDelete(pet.id)}
+                  >
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
+                </View>
+              )}
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedPet)}
@@ -351,179 +357,227 @@ export default function PetsPage() {
         title="Detalle de la mascota"
       >
         {selectedPet && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    value={modalForm.name}
-                    onChange={(e) =>
+              <View>
+                <Text style={shared.label}>Cliente</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.customer_id}
+                    onValueChange={(value) =>
                       setModalForm((prev) => ({
                         ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Cliente</span>
-                  <select
-                    value={modalForm.customer_id}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        customer_id: e.target.value,
+                        customer_id: value,
                       }))
                     }
                   >
-                    <option value="">Seleccioná</option>
+                    <Picker.Item label="Selecciona cliente" value="" />
                     {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
+                      <Picker.Item
+                        key={customer.id}
+                        label={customer.name}
+                        value={String(customer.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Raza</span>
-                  <input
-                    type="text"
-                    value={modalForm.breed}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        breed: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Tamaño</span>
-                  <input
-                    type="text"
-                    value={modalForm.size}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        size: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Notas</span>
-                  <textarea
-                    rows={3}
-                    value={modalForm.notes}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        notes: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              </>
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Nombre</Text>
+                <TextInput
+                  value={modalForm.name}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, name: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Raza</Text>
+                <TextInput
+                  value={modalForm.breed}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, breed: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Tamano</Text>
+                <TextInput
+                  value={modalForm.size}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, size: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Notas</Text>
+                <TextInput
+                  value={modalForm.notes}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, notes: value }))
+                  }
+                  multiline
+                  numberOfLines={3}
+                  style={[shared.input, local.textArea]}
+                />
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Nombre:</strong> {selectedPet.name || "-"}
-                </div>
-                <div>
-                  <strong>Cliente:</strong>{" "}
-                  {selectedPet.customer?.name ||
-                    customerById.get(selectedPet.customer_id) ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Raza:</strong> {selectedPet.breed || "-"}
-                </div>
-                <div>
-                  <strong>Tamaño:</strong> {selectedPet.size || "-"}
-                </div>
-                <div>
-                  <strong>Notas:</strong> {selectedPet.notes || "-"}
-                </div>
-              </>
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Cliente: </Text>
+                  {customerById.get(String(selectedPet.customer_id)) || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Nombre: </Text>
+                  {selectedPet.name || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Raza: </Text>
+                  {selectedPet.breed || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Tamano: </Text>
+                  {selectedPet.size || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Notas: </Text>
+                  {selectedPet.notes || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => openModalEdit(selectedPet)}
-                >
-                  <span
-                    style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
+                <>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedPet)}
                   >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                    >
-                      <path
-                        d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 2.75 2.75 1.99-1.66z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                    Editar
-                  </span>
-                </button>
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
+                      const removed = await handleDelete(selectedPet.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
+                </>
               )}
-              <button
-                type="button"
-                className="btn-danger"
-                disabled={!isAdmin}
-                onClick={async () => {
-                  if (!isAdmin) return;
-                  const removed = await handleDelete(selectedPet.id);
-                  if (removed) closeModal();
-                }}
-                title={
-                  isAdmin
-                    ? "Eliminar mascota"
-                    : "Solo administradores pueden eliminar"
-                }
-              >
-                <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    width="16"
-                    height="16"
-                  >
-                    <path
-                      d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  Eliminar
-                </span>
-              </button>
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  searchInput: {
+    minWidth: 200,
+    marginLeft: 8,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formFieldFull: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  textArea: {
+    height: 90,
+    textAlignVertical: "top",
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  listActions: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

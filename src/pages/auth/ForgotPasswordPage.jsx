@@ -1,98 +1,115 @@
-// src/pages/auth/ForgotPasswordPage.jsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { colors, styles as shared } from "../../styles/native";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
+  const navigation = useNavigation();
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!email.trim()) {
-      alert("Ingresá tu email.");
+      Alert.alert("Falta informacion", "Ingresa tu email.");
       return;
     }
 
     try {
       setSubmitting(true);
-      // TODO: reemplazar por llamada real al backend de recuperación.
-      alert("Te enviamos un link para recuperar la contraseña.");
-      navigate(`/reset-password?email=${encodeURIComponent(email.trim())}`);
+      Alert.alert(
+        "Listo",
+        "Te enviamos un link para recuperar la contrasena."
+      );
+      navigation.navigate("ResetPassword", { email: email.trim() });
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "radial-gradient(circle at top left, #262938, #111217 55%)",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          padding: "24px 28px",
-          borderRadius: "16px",
-          boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-          maxWidth: "380px",
-          width: "100%",
-        }}
+    <View style={local.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={local.card}
       >
-        <h1
-          style={{
-            fontFamily: "Fredoka, system-ui, sans-serif",
-            fontSize: "1.4rem",
-            marginBottom: "8px",
-          }}
+        <Text style={local.title}>Recuperar contrasena</Text>
+        <Text style={local.subtitle}>
+          Ingresa tu email y te enviamos un link para restablecerla.
+        </Text>
+
+        <Text style={shared.label}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder="tu@email.com"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={shared.input}
+        />
+
+        <Pressable
+          style={[shared.buttonPrimary, local.submitButton]}
+          onPress={handleSubmit}
+          disabled={submitting}
         >
-          Recuperar contraseña
-        </h1>
-        <p style={{ fontSize: "0.9rem", marginBottom: "18px" }}>
-          Ingresá tu email y te enviamos un link para restablecerla.
-        </p>
+          <Text style={shared.buttonText}>
+            {submitting ? "Enviando..." : "Recuperar contrasena"}
+          </Text>
+        </Pressable>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
-            Email
-            <input
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-              required
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={submitting}
-          >
-            {submitting ? "Enviando..." : "Recuperar contraseña"}
-          </button>
-        </form>
-
-        <div style={{ marginTop: 12 }}>
-          <Link to="/login" style={{ fontSize: "0.85rem", color: "#4a4a4a" }}>
-            Volver al inicio de sesión
-          </Link>
-        </div>
-      </div>
-    </div>
+        <Pressable onPress={() => navigation.navigate("Login")}>
+          <Text style={local.footerLink}>Volver al inicio de sesion</Text>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+const local = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  submitButton: {
+    marginTop: 16,
+  },
+  footerLink: {
+    marginTop: 16,
+    textAlign: "center",
+    color: colors.primary,
+    fontWeight: "600",
+  },
+});

@@ -1,6 +1,17 @@
 import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
@@ -34,36 +45,30 @@ export default function CustomersPage() {
     notes: "",
   });
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.name.trim()) {
-      alert("Ingresá el nombre del cliente.");
+      Alert.alert("Falta informacion", "Ingresa el nombre del cliente.");
       return;
     }
 
     try {
+      const payload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        notes: form.notes.trim(),
+      };
       if (editingId) {
-        await updateItem(editingId, {
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          email: form.email.trim(),
-          notes: form.notes.trim(),
-        });
+        await updateItem(editingId, payload);
       } else {
-        await createItem({
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          email: form.email.trim(),
-          notes: form.notes.trim(),
-        });
+        await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el cliente.");
+      Alert.alert("Error", err.message || "No se pudo guardar el cliente.");
       return;
     }
 
@@ -77,13 +82,13 @@ export default function CustomersPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este cliente?");
+    const ok = await confirmDelete("¿Eliminar este cliente?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el cliente.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el cliente.");
       return false;
     }
   }
@@ -121,7 +126,7 @@ export default function CustomersPage() {
   async function handleModalSave() {
     if (!selectedCustomer) return;
     if (!modalForm.name.trim()) {
-      alert("Ingresá el nombre del cliente.");
+      Alert.alert("Falta informacion", "Ingresa el nombre del cliente.");
       return;
     }
     try {
@@ -144,7 +149,7 @@ export default function CustomersPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el cliente.");
+      Alert.alert("Error", err.message || "No se pudo guardar el cliente.");
     }
   }
 
@@ -154,134 +159,127 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Clientes</h1>
-          <p className="page-subtitle">
-            Registro de dueños y datos de contacto.
-          </p>
-        </div>
-        <input
-          type="text"
-          placeholder="Buscar por nombre, email o teléfono..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.12)",
-            padding: "8px 14px",
-            background: "#12131a",
-            color: "#fff",
-            minWidth: 260,
-          }}
-        />
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Clientes</Text>
+            <Text style={shared.pageSubtitle}>
+              Registro de duenos y datos de contacto.
+            </Text>
+          </View>
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Buscar por nombre, email o telefono..."
+            placeholderTextColor={colors.textMuted}
+            style={[shared.pillInput, local.searchInput]}
+          />
+        </View>
+      </View>
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar cliente" : "Nuevo cliente"}
-        </h2>
-        <p className="card-subtitle">
-          Cargá los datos para asociar mascotas y servicios.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Carga los datos para asociar mascotas y servicios.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="name">Nombre completo</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Nombre completo</Text>
+            <TextInput
               value={form.name}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("name", value)}
+              style={shared.input}
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="phone">Teléfono</label>
-            <input
-              id="phone"
-              name="phone"
-              type="text"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Telefono</Text>
+            <TextInput
               value={form.phone}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("phone", value)}
+              style={shared.input}
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Email</Text>
+            <TextInput
               value={form.email}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("email", value)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={shared.input}
             />
-          </div>
-          <div className="form-field form-field--full">
-            <label htmlFor="notes">Notas</label>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={3}
+          </View>
+          <View style={local.formFieldFull}>
+            <Text style={shared.label}>Notas</Text>
+            <TextInput
               value={form.notes}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("notes", value)}
+              multiline
+              numberOfLines={3}
+              style={[shared.input, local.textArea]}
             />
-          </div>
-        </div>
+          </View>
+        </View>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar cliente"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar cliente"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable
+              style={shared.buttonSecondary}
+              onPress={cancelEdit}
+            >
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
-      </form>
+        </View>
+      </View>
 
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de clientes</h2>
-        <p className="card-subtitle">Clientes registrados en Bandidos.</p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de clientes</Text>
+        <Text style={shared.cardSubtitle}>Clientes registrados en Bandidos.</Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {customers.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin clientes cargados.
-            </div>
-          ) : (
-            customers.map((customer) => (
-              <div
-                key={customer.id}
-                className="list-item"
-                onClick={() => setSelectedCustomer(customer)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{customer.name}</div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Tel: {customer.phone || "-"}</span>
-                  <span>Email: {customer.email || "-"}</span>
-                </div>
-                {customer.notes && (
-                  <div className="list-item__meta">
-                    <span>Notas: {truncate(customer.notes, 80)}</span>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {customers.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin clientes cargados.
+          </Text>
+        ) : (
+          customers.map((customer) => (
+            <Pressable
+              key={customer.id}
+              style={local.listItem}
+              onPress={() => setSelectedCustomer(customer)}
+            >
+              <Text style={local.listTitle}>{customer.name}</Text>
+              <Text style={local.listMeta}>
+                Tel: {customer.phone || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Email: {customer.email || "-"}
+              </Text>
+              {customer.notes && (
+                <Text style={local.listMeta}>
+                  Notas: {truncate(customer.notes, 80)}
+                </Text>
+              )}
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedCustomer)}
@@ -289,121 +287,184 @@ export default function CustomersPage() {
         title="Detalle del cliente"
       >
         {selectedCustomer && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    value={modalForm.name}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Teléfono</span>
-                  <input
-                    type="text"
-                    value={modalForm.phone}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        phone: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Email</span>
-                  <input
-                    type="email"
-                    value={modalForm.email}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Notas</span>
-                  <textarea
-                    rows={3}
-                    value={modalForm.notes}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        notes: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              </>
+              <View>
+                <Text style={shared.label}>Nombre</Text>
+                <TextInput
+                  value={modalForm.name}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, name: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Telefono</Text>
+                <TextInput
+                  value={modalForm.phone}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, phone: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Email</Text>
+                <TextInput
+                  value={modalForm.email}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, email: value }))
+                  }
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Notas</Text>
+                <TextInput
+                  value={modalForm.notes}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, notes: value }))
+                  }
+                  multiline
+                  numberOfLines={3}
+                  style={[shared.input, local.textArea]}
+                />
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Nombre:</strong> {selectedCustomer.name || "-"}
-                </div>
-                <div>
-                  <strong>Teléfono:</strong> {selectedCustomer.phone || "-"}
-                </div>
-                <div>
-                  <strong>Email:</strong> {selectedCustomer.email || "-"}
-                </div>
-                <div>
-                  <strong>Notas:</strong> {selectedCustomer.notes || "-"}
-                </div>
-              </>
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Nombre: </Text>
+                  {selectedCustomer.name || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Telefono: </Text>
+                  {selectedCustomer.phone || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Email: </Text>
+                  {selectedCustomer.email || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Notas: </Text>
+                  {selectedCustomer.notes || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedCustomer)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedCustomer)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedCustomer.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  searchInput: {
+    minWidth: 220,
+    marginTop: 12,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formFieldFull: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  textArea: {
+    height: 90,
+    textAlignVertical: "top",
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: 6,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

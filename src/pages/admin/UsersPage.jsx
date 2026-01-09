@@ -1,7 +1,19 @@
 import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
 import { useAuth } from "../../context/AuthContext";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -22,19 +34,17 @@ export default function UsersPage() {
     role: "staff",
   });
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.email.trim()) {
-      alert("Ingresá email.");
+      Alert.alert("Falta informacion", "Ingresa email.");
       return;
     }
     if (!editingId && !form.password) {
-      alert("Ingresá una contraseña.");
+      Alert.alert("Falta informacion", "Ingresa una contrasena.");
       return;
     }
     try {
@@ -49,7 +59,7 @@ export default function UsersPage() {
         await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo crear el usuario.");
+      Alert.alert("Error", err.message || "No se pudo crear el usuario.");
       return;
     }
     setForm({ email: "", password: "", role: "staff" });
@@ -57,13 +67,13 @@ export default function UsersPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este usuario?");
+    const ok = await confirmDelete("¿Eliminar este usuario?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el usuario.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el usuario.");
       return false;
     }
   }
@@ -94,7 +104,7 @@ export default function UsersPage() {
   async function handleModalSave() {
     if (!selectedUser) return;
     if (!modalForm.email.trim()) {
-      alert("Ingresá email.");
+      Alert.alert("Falta informacion", "Ingresa email.");
       return;
     }
     try {
@@ -115,7 +125,7 @@ export default function UsersPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el usuario.");
+      Alert.alert("Error", err.message || "No se pudo guardar el usuario.");
     }
   }
 
@@ -126,140 +136,125 @@ export default function UsersPage() {
 
   if (!isAdmin) {
     return (
-      <div className="page-content">
-        <div className="card">
-          Este módulo es exclusivo para administradores.
-        </div>
-      </div>
+      <Screen>
+        <View style={shared.card}>
+          <Text style={shared.cardSubtitle}>
+            Este modulo es exclusivo para administradores.
+          </Text>
+        </View>
+      </Screen>
     );
   }
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Usuarios</h1>
-          <p className="page-subtitle">
-            Gestión de accesos y roles del sistema.
-          </p>
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <Text style={shared.pageTitle}>Usuarios</Text>
+        <Text style={shared.pageSubtitle}>
+          Gestion de accesos y roles del sistema.
+        </Text>
+      </View>
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar usuario" : "Nuevo usuario"}
-        </h2>
-        <p className="card-subtitle">
-          Creá accesos para el equipo administrativo.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Crea accesos para el equipo administrativo.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Email</Text>
+            <TextInput
               value={form.email}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("email", value)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={shared.input}
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="password">Contraseña</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Contrasena</Text>
+            <TextInput
               value={form.password}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("password", value)}
+              secureTextEntry
+              style={shared.input}
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="role">Rol</label>
-            <select
-              id="role"
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-            >
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
-            </select>
-          </div>
-        </div>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Rol</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.role}
+                onValueChange={(value) => handleChange("role", value)}
+              >
+                <Picker.Item label="Admin" value="admin" />
+                <Picker.Item label="Staff" value="staff" />
+              </Picker>
+            </View>
+          </View>
+        </View>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar usuario"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar usuario"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
-      </form>
+        </View>
+      </View>
 
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de usuarios</h2>
-        <p className="card-subtitle">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de usuarios</Text>
+        <Text style={shared.cardSubtitle}>
           Usuarios actuales con acceso al sistema.
-        </p>
+        </Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {items.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin usuarios cargados.
-            </div>
-          ) : (
-            items.map((item) => (
-              <div
-                key={item.id}
-                className="list-item"
-                onClick={() => setSelectedUser(item)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{item.email}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(item);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Rol: {item.role || "-"}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {items.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin usuarios cargados.
+          </Text>
+        ) : (
+          items.map((item) => (
+            <Pressable
+              key={item.id}
+              style={local.listItem}
+              onPress={() => setSelectedUser(item)}
+            >
+              <Text style={local.listTitle}>{item.email}</Text>
+              <Text style={local.listMeta}>Rol: {item.role || "-"}</Text>
+              <View style={local.listActions}>
+                <Pressable
+                  style={[shared.buttonSecondary, local.smallButton]}
+                  onPress={() => startEdit(item)}
+                >
+                  <Text style={shared.buttonTextLight}>Editar</Text>
+                </Pressable>
+                <Pressable
+                  style={[shared.buttonDanger, local.smallButton]}
+                  onPress={() => handleDelete(item.id)}
+                >
+                  <Text style={shared.buttonTextLight}>Eliminar</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedUser)}
@@ -267,104 +262,166 @@ export default function UsersPage() {
         title="Detalle del usuario"
       >
         {selectedUser && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Email</span>
-                  <input
-                    type="email"
-                    value={modalForm.email}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Contraseña</span>
-                  <input
-                    type="password"
-                    value={modalForm.password}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        password: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Rol</span>
-                  <select
-                    value={modalForm.role}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        role: e.target.value,
-                      }))
+              <View>
+                <Text style={shared.label}>Email</Text>
+                <TextInput
+                  value={modalForm.email}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, email: value }))
+                  }
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>
+                  Contrasena
+                </Text>
+                <TextInput
+                  value={modalForm.password}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, password: value }))
+                  }
+                  secureTextEntry
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Rol</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.role}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, role: value }))
                     }
                   >
-                    <option value="admin">Admin</option>
-                    <option value="staff">Staff</option>
-                  </select>
-                </label>
-              </>
+                    <Picker.Item label="Admin" value="admin" />
+                    <Picker.Item label="Staff" value="staff" />
+                  </Picker>
+                </View>
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Email:</strong> {selectedUser.email || "-"}
-                </div>
-                <div>
-                  <strong>Rol:</strong> {selectedUser.role || "-"}
-                </div>
-              </>
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Email: </Text>
+                  {selectedUser.email || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Rol: </Text>
+                  {selectedUser.role || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedUser)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedUser)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedUser.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  listActions: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

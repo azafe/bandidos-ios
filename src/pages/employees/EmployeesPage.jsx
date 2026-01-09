@@ -1,7 +1,18 @@
-// src/pages/employees/EmployeesPage.jsx
 import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function EmployeesPage() {
   const {
@@ -38,15 +49,13 @@ export default function EmployeesPage() {
     notes: "",
   });
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.name.trim()) {
-      alert("Ingresá al menos el nombre del empleado.");
+      Alert.alert("Falta informacion", "Ingresa el nombre del empleado.");
       return;
     }
 
@@ -65,7 +74,7 @@ export default function EmployeesPage() {
         await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el empleado.");
+      Alert.alert("Error", err.message || "No se pudo guardar el empleado.");
       return;
     }
 
@@ -81,13 +90,13 @@ export default function EmployeesPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este empleado?");
+    const ok = await confirmDelete("¿Eliminar este empleado?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el empleado.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el empleado.");
       return false;
     }
   }
@@ -131,7 +140,7 @@ export default function EmployeesPage() {
   async function handleModalSave() {
     if (!selectedEmployee) return;
     if (!modalForm.name.trim()) {
-      alert("Ingresá al menos el nombre del empleado.");
+      Alert.alert("Falta informacion", "Ingresa el nombre del empleado.");
       return;
     }
     try {
@@ -158,7 +167,7 @@ export default function EmployeesPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el empleado.");
+      Alert.alert("Error", err.message || "No se pudo guardar el empleado.");
     }
   }
 
@@ -168,167 +177,136 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="page-content">
-      {/* Encabezado */}
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Empleados</h1>
-          <p className="page-subtitle">
-            Registro del equipo de Bandidos: quién trabaja, en qué rol y cómo
-            contactarlos.
-          </p>
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <Text style={shared.pageTitle}>Empleados</Text>
+        <Text style={shared.pageSubtitle}>
+          Registro de colaboradores, groomers y staff.
+        </Text>
+      </View>
 
-      {/* Formulario */}
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar empleado" : "Nuevo empleado"}
-        </h2>
-        <p className="card-subtitle">
-          Cargá los datos básicos del empleado. Más adelante podemos sumar
-          sueldos, horarios y comisiones.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Administra los datos del equipo de trabajo.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="name">Nombre completo</label>
-            <input
-              id="name"
-              type="text"
-              name="name"
-              placeholder="Ej: Juan Pérez"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Nombre</Text>
+            <TextInput
               value={form.name}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("name", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="role">Rol</label>
-            <select
-              id="role"
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-            >
-              <option value="Groomer">Groomer</option>
-              <option value="Recepción">Recepción</option>
-              <option value="Ayudante">Ayudante</option>
-              <option value="Administración">Administración</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="phone">Teléfono</label>
-            <input
-              id="phone"
-              type="text"
-              name="phone"
-              placeholder="Ej: 381-555-5555"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Rol</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.role}
+                onValueChange={(value) => handleChange("role", value)}
+              >
+                <Picker.Item label="Groomer" value="Groomer" />
+                <Picker.Item label="Bano" value="Bano" />
+                <Picker.Item label="Recepcion" value="Recepcion" />
+                <Picker.Item label="Admin" value="Admin" />
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Telefono</Text>
+            <TextInput
               value={form.phone}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("phone", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="Ej: empleado@bandidos.com"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Email</Text>
+            <TextInput
               value={form.email}
-              onChange={handleChange}
+              onChangeText={(value) => handleChange("email", value)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="status">Estado</label>
-            <select
-              id="status"
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-            >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-            </select>
-          </div>
-
-          <div className="form-field form-field--full">
-            <label htmlFor="notes">Notas</label>
-            <textarea
-              id="notes"
-              name="notes"
-              placeholder="Observaciones, horarios, días que no trabaja, etc."
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Estado</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.status}
+                onValueChange={(value) => handleChange("status", value)}
+              >
+                <Picker.Item label="Activo" value="active" />
+                <Picker.Item label="Inactivo" value="inactive" />
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formFieldFull}>
+            <Text style={shared.label}>Notas</Text>
+            <TextInput
               value={form.notes}
-              onChange={handleChange}
-              rows={3}
+              onChangeText={(value) => handleChange("notes", value)}
+              multiline
+              numberOfLines={3}
+              style={[shared.input, local.textArea]}
             />
-          </div>
-        </div>
+          </View>
+        </View>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar empleado"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar empleado"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
-      </form>
+        </View>
+      </View>
 
-      {/* Lista */}
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de empleados</h2>
-        <p className="card-subtitle">
-          Vista general del equipo actual de Bandidos.
-        </p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de empleados</Text>
+        <Text style={shared.cardSubtitle}>Empleados registrados.</Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {employees.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin empleados cargados.
-            </div>
-          ) : (
-            employees.map((emp) => (
-              <div
-                key={emp.id}
-                className="list-item"
-                onClick={() => setSelectedEmployee(emp)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">{emp.name}</div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Rol: {emp.role || "-"}</span>
-                  <span>Tel: {emp.phone || "-"}</span>
-                  <span>Email: {emp.email || "-"}</span>
-                  <span>
-                    Estado: {emp.status === "active" ? "Activo" : "Inactivo"}
-                  </span>
-                </div>
-                {emp.notes && (
-                  <div className="list-item__meta">
-                    <span>Notas: {truncate(emp.notes, 80)}</span>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {employees.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin empleados cargados.
+          </Text>
+        ) : (
+          employees.map((emp) => (
+            <Pressable
+              key={emp.id}
+              style={local.listItem}
+              onPress={() => setSelectedEmployee(emp)}
+            >
+              <Text style={local.listTitle}>{emp.name}</Text>
+              <Text style={local.listMeta}>Rol: {emp.role || "-"}</Text>
+              <Text style={local.listMeta}>Telefono: {emp.phone || "-"}</Text>
+              <Text style={local.listMeta}>Email: {emp.email || "-"}</Text>
+              {emp.notes && (
+                <Text style={local.listMeta}>
+                  Notas: {truncate(emp.notes, 80)}
+                </Text>
+              )}
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedEmployee)}
@@ -336,156 +314,210 @@ export default function EmployeesPage() {
         title="Detalle del empleado"
       >
         {selectedEmployee && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    value={modalForm.name}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Rol</span>
-                  <input
-                    type="text"
-                    value={modalForm.role}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        role: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Teléfono</span>
-                  <input
-                    type="text"
-                    value={modalForm.phone}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        phone: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Email</span>
-                  <input
-                    type="email"
-                    value={modalForm.email}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Estado</span>
-                  <select
-                    value={modalForm.status}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        status: e.target.value,
-                      }))
+              <View>
+                <Text style={shared.label}>Nombre</Text>
+                <TextInput
+                  value={modalForm.name}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, name: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Rol</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.role}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, role: value }))
                     }
                   >
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Notas</span>
-                  <textarea
-                    rows={3}
-                    value={modalForm.notes}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        notes: e.target.value,
-                      }))
+                    <Picker.Item label="Groomer" value="Groomer" />
+                    <Picker.Item label="Bano" value="Bano" />
+                    <Picker.Item label="Recepcion" value="Recepcion" />
+                    <Picker.Item label="Admin" value="Admin" />
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Telefono</Text>
+                <TextInput
+                  value={modalForm.phone}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, phone: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Email</Text>
+                <TextInput
+                  value={modalForm.email}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, email: value }))
+                  }
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Estado</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.status}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, status: value }))
                     }
-                  />
-                </label>
-              </>
+                  >
+                    <Picker.Item label="Activo" value="active" />
+                    <Picker.Item label="Inactivo" value="inactive" />
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Notas</Text>
+                <TextInput
+                  value={modalForm.notes}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, notes: value }))
+                  }
+                  multiline
+                  numberOfLines={3}
+                  style={[shared.input, local.textArea]}
+                />
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Nombre:</strong> {selectedEmployee.name || "-"}
-                </div>
-                <div>
-                  <strong>Rol:</strong> {selectedEmployee.role || "-"}
-                </div>
-                <div>
-                  <strong>Teléfono:</strong> {selectedEmployee.phone || "-"}
-                </div>
-                <div>
-                  <strong>Email:</strong> {selectedEmployee.email || "-"}
-                </div>
-                <div>
-                  <strong>Estado:</strong>{" "}
-                  {selectedEmployee.status === "active" ? "Activo" : "Inactivo"}
-                </div>
-                <div>
-                  <strong>Notas:</strong> {selectedEmployee.notes || "-"}
-                </div>
-              </>
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Nombre: </Text>
+                  {selectedEmployee.name || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Rol: </Text>
+                  {selectedEmployee.role || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Telefono: </Text>
+                  {selectedEmployee.phone || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Email: </Text>
+                  {selectedEmployee.email || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Estado: </Text>
+                  {selectedEmployee.status || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Notas: </Text>
+                  {selectedEmployee.notes || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedEmployee)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedEmployee)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedEmployee.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formFieldFull: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  textArea: {
+    height: 90,
+    textAlignVertical: "top",
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

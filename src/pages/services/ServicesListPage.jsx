@@ -1,21 +1,25 @@
-// src/pages/services/ServicesListPage.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import { useNavigation } from "@react-navigation/native";
 import { apiRequest } from "../../services/apiClient";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
 
-/**
- * Convierte el string de fecha de Google Sheets
- * (ej: "29/7/2024", "7/29/24" o "2024-07-29")
- * a un objeto Date de JS.
- */
 function parseSheetDate(dateStr) {
   if (!dateStr) return null;
 
   const raw = String(dateStr).trim();
 
-  // Caso ISO o con guiones: 2024-07-29
   if (raw.includes("-")) {
     const parts = raw.split("-");
     if (parts.length === 3 && parts[0].length === 4) {
@@ -26,37 +30,42 @@ function parseSheetDate(dateStr) {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  // Caso con barras: 29/7/2024, 7/29/24, etc.
   const parts = raw.split("/");
   if (parts.length !== 3) return null;
 
   let [p1, p2, p3] = parts.map((v) => Number(v));
   if (!p1 || !p2 || !p3) return null;
 
-  let day, month, year;
+  let day;
+  let month;
 
-  // Detectar si la primera parte es día o mes
   if (p1 > 12) {
-    // Formato latino: dd/mm/aa
     day = p1;
     month = p2;
   } else if (p2 > 12) {
-    // Formato US: mm/dd/aa
     month = p1;
     day = p2;
   } else {
-    // Ambiguo: asumimos dd/mm/aa por ser Argentina
     day = p1;
     month = p2;
   }
 
-  year = p3 < 100 ? 2000 + p3 : p3;
-
+  const year = p3 < 100 ? 2000 + p3 : p3;
   const d = new Date(year, month - 1, day);
   return isNaN(d.getTime()) ? null : d;
 }
 
+function confirmDelete(message) {
+  return new Promise((resolve) => {
+    Alert.alert("Confirmar", message, [
+      { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
+      { text: "Eliminar", style: "destructive", onPress: () => resolve(true) },
+    ]);
+  });
+}
+
 export default function ServicesListPage() {
+  const navigation = useNavigation();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -104,7 +113,6 @@ export default function ServicesListPage() {
     };
   }, [filters]);
 
-  // Stats
   const servicesWithDate = services.map((s) => ({
     ...s,
     _dateObj: parseSheetDate(s.date),
@@ -129,7 +137,6 @@ export default function ServicesListPage() {
     0
   );
 
-  // Filtro de búsqueda sobre los servicios
   const searchTerm = search.trim().toLowerCase();
   const filteredServices = servicesWithDate.filter((s) => {
     if (!searchTerm) return true;
@@ -157,7 +164,7 @@ export default function ServicesListPage() {
   }
 
   async function handleDelete(service) {
-    const ok = window.confirm(
+    const ok = await confirmDelete(
       `¿Eliminar el turno de ${service.dogName || service.pet?.name} (${service.date})?`
     );
     if (!ok) return false;
@@ -168,313 +175,289 @@ export default function ServicesListPage() {
       setServices(Array.isArray(data) ? data : data?.items || []);
       return true;
     } catch {
-      alert("No se pudo eliminar el servicio. Revisá la consola.");
+      Alert.alert("Error", "No se pudo eliminar el servicio.");
       return false;
     }
   }
 
-  
-
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Servicios</h1>
-          <p className="page-subtitle">
-            Servicios registrados en Bandidos para el período seleccionado.
-          </p>
-        </div>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Servicios</Text>
+            <Text style={shared.pageSubtitle}>
+              Servicios registrados en Bandidos para el periodo seleccionado.
+            </Text>
+          </View>
+          <Pressable
+            style={[shared.buttonPrimary, local.headerButton]}
+            onPress={() => navigation.navigate("ServiceForm", { id: null })}
+          >
+            <Text style={shared.buttonText}>+ Nuevo servicio</Text>
+          </Pressable>
+        </View>
+      </View>
 
-        <Link to="/services/new" className="btn-primary">
-          + Nuevo servicio
-        </Link>
-      </header>
-
-      {loading && <div className="card">Cargando servicios...</div>}
+      {loading && <Text style={shared.cardSubtitle}>Cargando servicios...</Text>}
       {error && (
-        <div className="card" style={{ color: "#f37b7b" }}>
+        <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
           {error}
-        </div>
+        </Text>
       )}
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
-          Filtros de período
-        </h3>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div className="form-field">
-            <label htmlFor="from">Desde</label>
-            <input
-              id="from"
-              type="date"
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Filtros de periodo</Text>
+        <View style={local.filterGrid}>
+          <View style={local.filterField}>
+            <Text style={shared.label}>Desde</Text>
+            <TextInput
               value={filters.from}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, from: e.target.value }))
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, from: value }))
               }
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textMuted}
+              style={shared.input}
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="to">Hasta</label>
-            <input
-              id="to"
-              type="date"
+          </View>
+          <View style={local.filterField}>
+            <Text style={shared.label}>Hasta</Text>
+            <TextInput
               value={filters.to}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, to: e.target.value }))
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, to: value }))
               }
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textMuted}
+              style={shared.input}
             />
-          </div>
-          <div className="form-field">
-            <label htmlFor="customer_id">Cliente</label>
-            <select
-              id="customer_id"
-              value={filters.customer_id}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  customer_id: e.target.value,
-                  pet_id: "",
-                }))
-              }
-            >
-              <option value="">Todos</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-field">
-            <label htmlFor="pet_id">Mascota</label>
-            <select
-              id="pet_id"
-              value={filters.pet_id}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, pet_id: e.target.value }))
-              }
-            >
-              <option value="">Todas</option>
-              {pets
-                .filter((p) =>
-                  filters.customer_id ? p.customer_id === filters.customer_id : true
-                )
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
+          </View>
+          <View style={local.filterField}>
+            <Text style={shared.label}>Cliente</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.customer_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    customer_id: value,
+                    pet_id: "",
+                  }))
+                }
+              >
+                <Picker.Item label="Todos" value="" />
+                {customers.map((c) => (
+                  <Picker.Item key={c.id} label={c.name} value={String(c.id)} />
                 ))}
-            </select>
-          </div>
-          <div className="form-field">
-            <label htmlFor="service_type_id">Servicio</label>
-            <select
-              id="service_type_id"
-              value={filters.service_type_id}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  service_type_id: e.target.value,
-                }))
-              }
-            >
-              <option value="">Todos</option>
-              {serviceTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-field">
-            <label htmlFor="groomer_id">Groomer</label>
-            <select
-              id="groomer_id"
-              value={filters.groomer_id}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
-              }
-            >
-              <option value="">Todos</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+              </Picker>
+            </View>
+          </View>
+          <View style={local.filterField}>
+            <Text style={shared.label}>Mascota</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.pet_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, pet_id: value }))
+                }
+              >
+                <Picker.Item label="Todas" value="" />
+                {pets
+                  .filter((p) =>
+                    filters.customer_id
+                      ? String(p.customer_id) === String(filters.customer_id)
+                      : true
+                  )
+                  .map((p) => (
+                    <Picker.Item key={p.id} label={p.name} value={String(p.id)} />
+                  ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.filterField}>
+            <Text style={shared.label}>Servicio</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.service_type_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, service_type_id: value }))
+                }
+              >
+                <Picker.Item label="Todos" value="" />
+                {serviceTypes.map((t) => (
+                  <Picker.Item key={t.id} label={t.name} value={String(t.id)} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.filterField}>
+            <Text style={shared.label}>Groomer</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.groomer_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, groomer_id: value }))
+                }
+              >
+                <Picker.Item label="Todos" value="" />
+                {employees.map((emp) => (
+                  <Picker.Item key={emp.id} label={emp.name} value={String(emp.id)} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </View>
+      </View>
 
-      {/* Cards resumen */}
-      <div className="cards-row" style={{ display: "flex", gap: 16, marginBottom: 24 }}>
-        <div className="card" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>Servicios de hoy</h3>
-          <p style={{ fontSize: "2rem", fontWeight: 600 }}>{countToday}</p>
-          <p style={{ fontSize: "0.9rem", color: "#999" }}>
+      <View style={local.cardsRow}>
+        <View style={[shared.card, local.summaryCard]}>
+          <Text style={shared.cardTitle}>Servicios de hoy</Text>
+          <Text style={local.summaryValue}>{countToday}</Text>
+          <Text style={shared.cardSubtitle}>
             Ingresos de hoy:{" "}
-            <strong>${totalToday.toLocaleString("es-AR")}</strong>
-          </p>
-        </div>
+            <Text style={local.summaryStrong}>
+              ${totalToday.toLocaleString("es-AR")}
+            </Text>
+          </Text>
+        </View>
+        <View style={[shared.card, local.summaryCard]}>
+          <Text style={shared.cardTitle}>Servicios del periodo</Text>
+          <Text style={local.summaryValue}>{countPeriod}</Text>
+          <Text style={shared.cardSubtitle}>
+            Ingresos del periodo:{" "}
+            <Text style={local.summaryStrong}>
+              ${totalPeriod.toLocaleString("es-AR")}
+            </Text>
+          </Text>
+          <Text style={local.summaryFoot}>Periodo: {periodLabel}</Text>
+        </View>
+      </View>
 
-        <div className="card" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>Servicios del período</h3>
-          <p style={{ fontSize: "2rem", fontWeight: 600 }}>{countPeriod}</p>
-          <p style={{ fontSize: "0.9rem", color: "#999" }}>
-            Ingresos del período:{" "}
-            <strong>${totalPeriod.toLocaleString("es-AR")}</strong>
-            <br />
-            <span style={{ fontSize: "0.8rem" }}>Período: {periodLabel}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Lista: servicios de hoy */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>Servicios de hoy</h2>
-        <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 12 }}>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Servicios de hoy</Text>
+        <Text style={shared.cardSubtitle}>
           Turnos registrados en la fecha actual.
-        </p>
+        </Text>
 
-        <div className="list-wrapper">
-          {servicesToday.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Hoy todavía no se registraron servicios.
-            </div>
-          ) : (
-            servicesToday.map((s) => (
-              <div
-                key={s.id}
-                className="list-item"
-                onClick={() => setSelectedService(s)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">
-                    {s.dogName || s.pet?.name || "Servicio"}
-                  </div>
-                  <div className="list-item__actions">
-                    <Link
-                      to={`/services/${s.id}`}
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(s);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Fecha: {s.date || "-"}</span>
-                  <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
-                  <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
-                  <span>Precio: {formatPrice(s.price)}</span>
-                  <span>
-                    Método: {s.paymentMethod || s.payment_method?.name || "-"}
-                  </span>
-                  <span>Groomer: {s.groomer?.name || s.groomer || "-"}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {servicesToday.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Hoy todavia no se registraron servicios.
+          </Text>
+        ) : (
+          servicesToday.map((s) => (
+            <Pressable
+              key={s.id}
+              style={local.listItem}
+              onPress={() => setSelectedService(s)}
+            >
+              <View style={local.listHeader}>
+                <Text style={local.listTitle}>
+                  {s.dogName || s.pet?.name || "Servicio"}
+                </Text>
+                <View style={local.listActions}>
+                  <Pressable
+                    style={[shared.buttonSecondary, local.smallButton]}
+                    onPress={() => navigation.navigate("ServiceForm", { id: s.id })}
+                  >
+                    <Text style={shared.buttonTextLight}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.smallButton]}
+                    onPress={() => handleDelete(s)}
+                  >
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Text style={local.listMeta}>Fecha: {s.date || "-"}</Text>
+              <Text style={local.listMeta}>
+                Dueño: {s.ownerName || s.customer?.name || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Servicio: {s.type || s.service_type?.name || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Precio: {formatPrice(s.price)}
+              </Text>
+              <Text style={local.listMeta}>
+                Metodo: {s.paymentMethod || s.payment_method?.name || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Groomer: {s.groomer?.name || s.groomer || "-"}
+              </Text>
+            </Pressable>
+          ))
+        )}
+      </View>
 
-      {/* Lista: servicios del período + buscador */}
-      <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
-              Servicios del período
-            </h2>
-            <p style={{ fontSize: "0.85rem", color: "#888" }}>
-              Historial de servicios del período mostrado. Usá el buscador para
-              filtrar por perro, dueño, servicio, método o groomer.
-            </p>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Buscar por perro, dueño, servicio..."
+      <View style={shared.card}>
+        <View style={local.searchHeader}>
+          <View style={local.searchText}>
+            <Text style={shared.cardTitle}>Servicios del periodo</Text>
+            <Text style={shared.cardSubtitle}>
+              Historial del periodo mostrado.
+            </Text>
+          </View>
+          <TextInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.12)",
-              padding: "8px 14px",
-              background: "#12131a",
-              color: "#fff",
-              minWidth: 260,
-            }}
+            onChangeText={setSearch}
+            placeholder="Buscar por perro, dueño, servicio..."
+            placeholderTextColor={colors.textMuted}
+            style={[shared.pillInput, local.searchInput]}
           />
-        </div>
+        </View>
 
-        <div className="list-wrapper">
-          {filteredServices.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              No hay servicios que coincidan con la búsqueda en este período.
-            </div>
-          ) : (
-            filteredServices.map((s) => (
-              <div
-                key={s.id}
-                className="list-item"
-                onClick={() => setSelectedService(s)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">
-                    {s.dogName || s.pet?.name || "Servicio"}
-                  </div>
-                  <div className="list-item__actions">
-                    <Link
-                      to={`/services/${s.id}`}
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(s);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Fecha: {s.date || "-"}</span>
-                  <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
-                  <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
-                  <span>Precio: {formatPrice(s.price)}</span>
-                  <span>
-                    Método: {s.paymentMethod || s.payment_method?.name || "-"}
-                  </span>
-                  <span>Groomer: {s.groomer?.name || s.groomer || "-"}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {filteredServices.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            No hay servicios que coincidan con la busqueda.
+          </Text>
+        ) : (
+          filteredServices.map((s) => (
+            <Pressable
+              key={s.id}
+              style={local.listItem}
+              onPress={() => setSelectedService(s)}
+            >
+              <View style={local.listHeader}>
+                <Text style={local.listTitle}>
+                  {s.dogName || s.pet?.name || "Servicio"}
+                </Text>
+                <View style={local.listActions}>
+                  <Pressable
+                    style={[shared.buttonSecondary, local.smallButton]}
+                    onPress={() => navigation.navigate("ServiceForm", { id: s.id })}
+                  >
+                    <Text style={shared.buttonTextLight}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.smallButton]}
+                    onPress={() => handleDelete(s)}
+                  >
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Text style={local.listMeta}>Fecha: {s.date || "-"}</Text>
+              <Text style={local.listMeta}>
+                Dueño: {s.ownerName || s.customer?.name || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Servicio: {s.type || s.service_type?.name || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Precio: {formatPrice(s.price)}
+              </Text>
+              <Text style={local.listMeta}>
+                Metodo: {s.paymentMethod || s.payment_method?.name || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Groomer: {s.groomer?.name || s.groomer || "-"}
+              </Text>
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedService)}
@@ -482,59 +465,182 @@ export default function ServicesListPage() {
         title="Detalle del servicio"
       >
         {selectedService && (
-          <>
-            <div>
-              <strong>Fecha:</strong> {selectedService.date || "-"}
-            </div>
-            <div>
-              <strong>Perro:</strong>{" "}
+          <View>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Fecha: </Text>
+              {selectedService.date || "-"}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Perro: </Text>
               {selectedService.dogName || selectedService.pet?.name || "-"}
-            </div>
-            <div>
-              <strong>Dueño:</strong>{" "}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Dueno: </Text>
               {selectedService.ownerName || selectedService.customer?.name || "-"}
-            </div>
-            <div>
-              <strong>Servicio:</strong>{" "}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Servicio: </Text>
               {selectedService.type ||
                 selectedService.service_type?.name ||
                 "-"}
-            </div>
-            <div>
-              <strong>Precio:</strong> {formatPrice(selectedService.price)}
-            </div>
-            <div>
-              <strong>Método de pago:</strong>{" "}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Precio: </Text>
+              {formatPrice(selectedService.price)}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Metodo de pago: </Text>
               {selectedService.paymentMethod ||
                 selectedService.payment_method?.name ||
                 "-"}
-            </div>
-            <div>
-              <strong>Groomer:</strong>{" "}
+            </Text>
+            <Text style={local.modalText}>
+              <Text style={local.modalLabel}>Groomer: </Text>
               {selectedService.groomer?.name || selectedService.groomer || "-"}
-            </div>
-            <div className="modal-actions">
-              <Link
-                to={`/services/${selectedService.id}`}
-                className="btn-primary"
-                onClick={() => setSelectedService(null)}
+            </Text>
+            <View style={local.modalActions}>
+              <Pressable
+                style={[shared.buttonPrimary, local.modalButton]}
+                onPress={() => {
+                  setSelectedService(null);
+                  navigation.navigate("ServiceForm", { id: selectedService.id });
+                }}
               >
-                Editar
-              </Link>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={async () => {
+                <Text style={shared.buttonText}>Editar</Text>
+              </Pressable>
+              <Pressable
+                style={[shared.buttonDanger, local.modalButton]}
+                onPress={async () => {
                   const removed = await handleDelete(selectedService);
                   if (removed) setSelectedService(null);
                 }}
               >
-                Eliminar
-              </button>
-            </div>
-          </>
+                <Text style={shared.buttonTextLight}>Eliminar</Text>
+              </Pressable>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  headerButton: {
+    marginTop: 12,
+  },
+  filterGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  filterField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+  },
+  cardsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  summaryCard: {
+    flexBasis: "48%",
+    marginRight: "4%",
+  },
+  summaryValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: colors.text,
+    marginTop: 8,
+  },
+  summaryStrong: {
+    color: colors.text,
+    fontWeight: "600",
+  },
+  summaryFoot: {
+    marginTop: 6,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  listActions: {
+    flexDirection: "row",
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginLeft: 8,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  searchHeader: {
+    marginBottom: 12,
+  },
+  searchText: {
+    marginBottom: 10,
+  },
+  searchInput: {
+    minWidth: 220,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

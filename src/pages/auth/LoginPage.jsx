@@ -1,117 +1,143 @@
-// src/pages/auth/LoginPage.jsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
-import "./login.css";
+import { colors, styles as shared } from "../../styles/native";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const [form, setForm] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!form.email || !form.password) {
-      alert("Completá email y contraseña.");
+      Alert.alert("Falta informacion", "Completa email y contrasena.");
       return;
     }
 
     try {
       setSubmitting(true);
       await login({ email: form.email, password: form.password });
-      navigate("/");
     } catch (err) {
-      alert(err.message || "No se pudo iniciar sesión.");
+      Alert.alert("Error", err.message || "No se pudo iniciar sesion.");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-logo">
-          <img src={logo} alt="Logo Bandidos" />
-        </div>
-        <h1 className="login-title">Bandidos</h1>
-        <p className="login-subtitle">Inicio de sesión</p>
+    <View style={local.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={local.card}
+      >
+        <Image source={logo} style={local.logo} />
+        <Text style={local.title}>Bandidos</Text>
+        <Text style={local.subtitle}>Inicio de sesion</Text>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <label className="login-label" htmlFor="email">
-            Email
-          </label>
-          <div className="login-input">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="login-input__icon"
-            >
-              <path
-                d="M4 6.75C4 5.784 4.784 5 5.75 5h12.5C19.216 5 20 5.784 20 6.75v10.5c0 .966-.784 1.75-1.75 1.75H5.75C4.784 19 4 18.216 4 17.25V6.75zm1.75-.25a.25.25 0 0 0-.25.25v.317l6.5 4.55 6.5-4.55V6.75a.25.25 0 0 0-.25-.25H5.75zm12.75 2.384-5.96 4.172a1 1 0 0 1-1.08 0L5.5 8.884v8.366c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V8.884z"
-                fill="currentColor"
-              />
-            </svg>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="tu@email.com"
-              autoComplete="email"
-              aria-label="Email"
-              required
-            />
-          </div>
+        <View style={local.form}>
+          <Text style={shared.label}>Email</Text>
+          <TextInput
+            value={form.email}
+            onChangeText={(value) => handleChange("email", value)}
+            placeholder="tu@email.com"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={shared.input}
+          />
 
-          <label className="login-label" htmlFor="password">
-            Contraseña
-          </label>
-          <div className="login-input">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="login-input__icon"
-            >
-              <path
-                d="M8.75 8V6.75a3.25 3.25 0 0 1 6.5 0V8h1.5A1.75 1.75 0 0 1 18.5 9.75v7.5A1.75 1.75 0 0 1 16.75 19h-9.5A1.75 1.75 0 0 1 5.5 17.25v-7.5A1.75 1.75 0 0 1 7.25 8h1.5zm1.5 0h3.5V6.75a1.75 1.75 0 0 0-3.5 0V8z"
-                fill="currentColor"
-              />
-            </svg>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              aria-label="Contraseña"
-              required
-            />
-          </div>
+          <Text style={[shared.label, { marginTop: 12 }]}>Contrasena</Text>
+          <TextInput
+            value={form.password}
+            onChangeText={(value) => handleChange("password", value)}
+            placeholder="••••••••"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+            style={shared.input}
+          />
 
-          <button
-            type="submit"
-            className="login-button"
+          <Pressable
+            style={[shared.buttonPrimary, local.submitButton]}
+            onPress={handleSubmit}
             disabled={submitting}
           >
-            {submitting && <span className="login-spinner" aria-hidden="true" />}
-            {submitting ? "Ingresando..." : "Ingresar"}
-          </button>
-        </form>
+            <Text style={shared.buttonText}>
+              {submitting ? "Ingresando..." : "Ingresar"}
+            </Text>
+          </Pressable>
+        </View>
 
-        <div className="login-footer">
-          <Link to="/forgot-password">Olvidé mi contraseña</Link>
-        </div>
-      </div>
-    </div>
+        <Pressable onPress={() => navigation.navigate("ForgotPassword")}>
+          <Text style={local.footerLink}>Olvide mi contrasena</Text>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+const local = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.text,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: "center",
+    marginTop: 6,
+  },
+  form: {
+    marginTop: 20,
+  },
+  submitButton: {
+    marginTop: 20,
+  },
+  footerLink: {
+    marginTop: 16,
+    textAlign: "center",
+    color: colors.primary,
+    fontWeight: "600",
+  },
+});

@@ -1,7 +1,18 @@
-// src/pages/expenses/DailyExpensesPage.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import Screen from "../../components/layout/Screen";
+import { colors, styles as shared } from "../../styles/native";
+import { confirmDelete } from "../../utils/confirmDelete";
 
 export default function DailyExpensesPage() {
   const today = new Date().toISOString().slice(0, 10);
@@ -41,6 +52,16 @@ export default function DailyExpensesPage() {
     supplier: "",
   });
 
+  const categoryById = useMemo(() => {
+    return new Map(categories.map((cat) => [String(cat.id), cat.name]));
+  }, [categories]);
+  const paymentById = useMemo(() => {
+    return new Map(paymentMethods.map((m) => [String(m.id), m.name]));
+  }, [paymentMethods]);
+  const supplierById = useMemo(() => {
+    return new Map(suppliers.map((s) => [String(s.id), s.name]));
+  }, [suppliers]);
+
   function formatCurrency(value) {
     return `$${Number(value || 0).toLocaleString("es-AR")}`;
   }
@@ -50,17 +71,14 @@ export default function DailyExpensesPage() {
     return sum;
   }, 0);
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function handleChange(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
+  async function handleSubmit() {
     const amountNumber = Number(form.amount);
     if (!amountNumber || amountNumber <= 0) {
-      alert("Ingresá un monto válido.");
+      Alert.alert("Falta informacion", "Ingresa un monto valido.");
       return;
     }
     try {
@@ -78,7 +96,7 @@ export default function DailyExpensesPage() {
         await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el gasto.");
+      Alert.alert("Error", err.message || "No se pudo guardar el gasto.");
       return;
     }
 
@@ -92,13 +110,13 @@ export default function DailyExpensesPage() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este gasto?");
+    const ok = await confirmDelete("¿Eliminar este gasto?");
     if (!ok) return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el gasto.");
+      Alert.alert("Error", err.message || "No se pudo eliminar el gasto.");
       return false;
     }
   }
@@ -107,11 +125,11 @@ export default function DailyExpensesPage() {
     setEditingId(expense.id);
     setForm({
       date: expense.date || today,
-      category: expense.category_id || "",
+      category: String(expense.category_id || ""),
       description: expense.description || "",
       amount: expense.amount ? String(expense.amount) : "",
-      paymentMethod: expense.payment_method_id || "",
-      supplier: expense.supplier_id || "",
+      paymentMethod: String(expense.payment_method_id || ""),
+      supplier: String(expense.supplier_id || ""),
     });
   }
 
@@ -130,11 +148,13 @@ export default function DailyExpensesPage() {
   function openModalEdit(expense) {
     setModalForm({
       date: expense.date || today,
-      category: expense.category_id || expense.category?.id || "",
+      category: String(expense.category_id || expense.category?.id || ""),
       description: expense.description || "",
       amount: expense.amount ? String(expense.amount) : "",
-      paymentMethod: expense.payment_method_id || expense.payment_method?.id || "",
-      supplier: expense.supplier_id || expense.supplier?.id || "",
+      paymentMethod: String(
+        expense.payment_method_id || expense.payment_method?.id || ""
+      ),
+      supplier: String(expense.supplier_id || expense.supplier?.id || ""),
     });
     setIsEditingModal(true);
   }
@@ -143,7 +163,7 @@ export default function DailyExpensesPage() {
     if (!selectedExpense) return;
     const amountNumber = Number(modalForm.amount);
     if (!amountNumber || amountNumber <= 0) {
-      alert("Ingresá un monto válido.");
+      Alert.alert("Falta informacion", "Ingresa un monto valido.");
       return;
     }
     try {
@@ -171,7 +191,7 @@ export default function DailyExpensesPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el gasto.");
+      Alert.alert("Error", err.message || "No se pudo guardar el gasto.");
     }
   }
 
@@ -181,233 +201,225 @@ export default function DailyExpensesPage() {
   }
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Gastos diarios</h1>
-          <p className="page-subtitle">
-            Registrá los gastos del día a día: shampoo, limpieza, snacks,
-            mantenimiento menor, etc.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <input
-            type="date"
-            value={filters.from}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, from: e.target.value }))
-            }
-          />
-          <input
-            type="date"
-            value={filters.to}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, to: e.target.value }))
-            }
-          />
-          <select
-            value={filters.category_id}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, category_id: e.target.value }))
-            }
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
+    <Screen>
+      <View style={shared.pageHeader}>
+        <View style={local.headerRow}>
+          <View style={local.headerText}>
+            <Text style={shared.pageTitle}>Gastos diarios</Text>
+            <Text style={shared.pageSubtitle}>
+              Registra gastos del dia: shampoo, limpieza, snacks, etc.
+            </Text>
+          </View>
+          <View style={local.filterRow}>
+            <TextInput
+              value={filters.from}
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, from: value }))
+              }
+              placeholder="Desde (YYYY-MM-DD)"
+              placeholderTextColor={colors.textMuted}
+              style={[shared.pillInput, local.filterInput]}
+            />
+            <TextInput
+              value={filters.to}
+              onChangeText={(value) =>
+                setFilters((prev) => ({ ...prev, to: value }))
+              }
+              placeholder="Hasta (YYYY-MM-DD)"
+              placeholderTextColor={colors.textMuted}
+              style={[shared.pillInput, local.filterInput]}
+            />
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={filters.category_id}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, category_id: value }))
+                }
+              >
+                <Picker.Item label="Todas las categorias" value="" />
+                {categories.map((cat) => (
+                  <Picker.Item
+                    key={cat.id}
+                    label={cat.name}
+                    value={String(cat.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </View>
+      </View>
 
-      {/* Formulario de carga */}
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>
           {editingId ? "Editar gasto" : "Nuevo gasto"}
-        </h2>
-        <p className="card-subtitle">
-          Completa los datos del gasto para llevar el control de caja.
-        </p>
+        </Text>
+        <Text style={shared.cardSubtitle}>
+          Completa los datos del gasto para el control de caja.
+        </Text>
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="date">Fecha</label>
-            <input
-              id="date"
-              type="date"
-              name="date"
+        <View style={local.formGrid}>
+          <View style={local.formField}>
+            <Text style={shared.label}>Fecha</Text>
+            <TextInput
               value={form.date}
-              onChange={handleChange}
-              required
+              onChangeText={(value) => handleChange("date", value)}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textMuted}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="category">Categoría</label>
-            <select
-              id="category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="description">Descripción</label>
-            <input
-              id="description"
-              type="text"
-              name="description"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Categoria</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.category}
+                onValueChange={(value) => handleChange("category", value)}
+              >
+                <Picker.Item label="Selecciona categoria" value="" />
+                {categories.map((cat) => (
+                  <Picker.Item
+                    key={cat.id}
+                    label={cat.name}
+                    value={String(cat.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formFieldFull}>
+            <Text style={shared.label}>Descripcion</Text>
+            <TextInput
               value={form.description}
-              onChange={handleChange}
-              placeholder="Ej: Shampoo para pelaje largo"
+              onChangeText={(value) => handleChange("description", value)}
+              style={shared.input}
             />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="amount">Monto (ARS)</label>
-            <input
-              id="amount"
-              type="number"
-              name="amount"
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Monto</Text>
+            <TextInput
               value={form.amount}
-              onChange={handleChange}
-              min="0"
-              step="100"
-              required
+              onChangeText={(value) => handleChange("amount", value)}
+              keyboardType="numeric"
+              style={shared.input}
             />
-          </div>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Metodo de pago</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.paymentMethod}
+                onValueChange={(value) => handleChange("paymentMethod", value)}
+              >
+                <Picker.Item label="Selecciona metodo" value="" />
+                {paymentMethods.map((method) => (
+                  <Picker.Item
+                    key={method.id}
+                    label={method.name}
+                    value={String(method.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+          <View style={local.formField}>
+            <Text style={shared.label}>Proveedor</Text>
+            <View style={local.pickerWrap}>
+              <Picker
+                selectedValue={form.supplier}
+                onValueChange={(value) => handleChange("supplier", value)}
+              >
+                <Picker.Item label="Selecciona proveedor" value="" />
+                {suppliers.map((supplier) => (
+                  <Picker.Item
+                    key={supplier.id}
+                    label={supplier.name}
+                    value={String(supplier.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </View>
 
-          <div className="form-field">
-            <label htmlFor="paymentMethod">Método de pago</label>
-            <select
-              id="paymentMethod"
-              name="paymentMethod"
-              value={form.paymentMethod}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {paymentMethods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="supplier">Proveedor</label>
-            <select
-              id="supplier"
-              name="supplier"
-              value={form.supplier}
-              onChange={handleChange}
-            >
-              <option value="">Seleccioná</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar gasto"}
-          </button>
+        <View style={local.formActions}>
+          <Pressable style={shared.buttonPrimary} onPress={handleSubmit}>
+            <Text style={shared.buttonText}>
+              {editingId ? "Guardar cambios" : "Guardar gasto"}
+            </Text>
+          </Pressable>
           {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
-              Cancelar
-            </button>
+            <Pressable style={shared.buttonSecondary} onPress={cancelEdit}>
+              <Text style={shared.buttonTextLight}>Cancelar</Text>
+            </Pressable>
           )}
-        </div>
+        </View>
+      </View>
 
-        <div className="expenses-total">
-          Total del día ({form.date}):{" "}
-          <strong>${totalToday.toLocaleString("es-AR")}</strong>
-        </div>
-      </form>
+      <View style={local.totalCard}>
+        <Text style={local.totalLabel}>Total del dia</Text>
+        <Text style={local.totalValue}>{formatCurrency(totalToday)}</Text>
+      </View>
 
-      {/* Lista de gastos */}
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de gastos</h2>
-        <p className="card-subtitle">
-          Resumen de los gastos cargados. Más adelante podemos filtrar por
-          fecha, categoría y método de pago.
-        </p>
+      <View style={shared.card}>
+        <Text style={shared.cardTitle}>Listado de gastos</Text>
+        <Text style={shared.cardSubtitle}>
+          Gastos diarios registrados.
+        </Text>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <Text style={shared.cardSubtitle}>Cargando...</Text>}
         {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+          <Text style={[shared.cardSubtitle, { color: colors.danger }]}>
             {error}
-          </div>
+          </Text>
         )}
 
-        <div className="list-wrapper">
-          {expenses.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin gastos cargados.
-            </div>
-          ) : (
-            expenses.map((exp) => (
-              <div
-                key={exp.id}
-                className="list-item"
-                onClick={() => setSelectedExpense(exp)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">
-                    {exp.description || "Gasto"}
-                  </div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        startEdit(exp);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDelete(exp.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Fecha: {exp.date || "-"}</span>
-                  <span>Categoría: {exp.category?.name || exp.category_id || "-"}</span>
-                  <span>Monto: {formatCurrency(exp.amount)}</span>
-                  <span>
-                    Método: {exp.payment_method?.name || exp.payment_method_id || "-"}
-                  </span>
-                  <span>Proveedor: {exp.supplier?.name || exp.supplier_id || "-"}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        {expenses.length === 0 ? (
+          <Text style={[shared.cardSubtitle, local.centerText]}>
+            Sin gastos cargados.
+          </Text>
+        ) : (
+          expenses.map((expense) => (
+            <Pressable
+              key={expense.id}
+              style={local.listItem}
+              onPress={() => setSelectedExpense(expense)}
+            >
+              <Text style={local.listTitle}>
+                {expense.description || "(Sin detalle)"}
+              </Text>
+              <Text style={local.listMeta}>Fecha: {expense.date || "-"}</Text>
+              <Text style={local.listMeta}>
+                Categoria:{" "}
+                {categoryById.get(String(expense.category_id)) || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Monto: {formatCurrency(expense.amount)}
+              </Text>
+              <Text style={local.listMeta}>
+                Metodo: {paymentById.get(String(expense.payment_method_id)) || "-"}
+              </Text>
+              <Text style={local.listMeta}>
+                Proveedor: {supplierById.get(String(expense.supplier_id)) || "-"}
+              </Text>
+              <View style={local.listActions}>
+                <Pressable
+                  style={[shared.buttonSecondary, local.smallButton]}
+                  onPress={() => startEdit(expense)}
+                >
+                  <Text style={shared.buttonTextLight}>Editar</Text>
+                </Pressable>
+                <Pressable
+                  style={[shared.buttonDanger, local.smallButton]}
+                  onPress={() => handleDelete(expense.id)}
+                >
+                  <Text style={shared.buttonTextLight}>Eliminar</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Modal
         isOpen={Boolean(selectedExpense)}
@@ -415,183 +427,280 @@ export default function DailyExpensesPage() {
         title="Detalle del gasto"
       >
         {selectedExpense && (
-          <>
+          <View>
             {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Fecha</span>
-                  <input
-                    type="date"
-                    value={modalForm.date}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Categoría</span>
-                  <select
-                    value={modalForm.category}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
+              <View>
+                <Text style={shared.label}>Fecha</Text>
+                <TextInput
+                  value={modalForm.date}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, date: value }))
+                  }
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textMuted}
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Categoria</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.category}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, category: value }))
                     }
                   >
-                    <option value="">Seleccioná</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
+                    <Picker.Item label="Selecciona categoria" value="" />
+                    {categories.map((cat) => (
+                      <Picker.Item
+                        key={cat.id}
+                        label={cat.name}
+                        value={String(cat.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Descripción</span>
-                  <input
-                    type="text"
-                    value={modalForm.description}
-                    onChange={(e) =>
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>
+                  Descripcion
+                </Text>
+                <TextInput
+                  value={modalForm.description}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, description: value }))
+                  }
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>Monto</Text>
+                <TextInput
+                  value={modalForm.amount}
+                  onChangeText={(value) =>
+                    setModalForm((prev) => ({ ...prev, amount: value }))
+                  }
+                  keyboardType="numeric"
+                  style={shared.input}
+                />
+                <Text style={[shared.label, { marginTop: 12 }]}>
+                  Metodo de pago
+                </Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.paymentMethod}
+                    onValueChange={(value) =>
                       setModalForm((prev) => ({
                         ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Monto</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={modalForm.amount}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        amount: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Método de pago</span>
-                  <select
-                    value={modalForm.paymentMethod}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        paymentMethod: e.target.value,
+                        paymentMethod: value,
                       }))
                     }
                   >
-                    <option value="">Seleccioná</option>
+                    <Picker.Item label="Selecciona metodo" value="" />
                     {paymentMethods.map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.name}
-                      </option>
+                      <Picker.Item
+                        key={method.id}
+                        label={method.name}
+                        value={String(method.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Proveedor</span>
-                  <select
-                    value={modalForm.supplier}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        supplier: e.target.value,
-                      }))
+                  </Picker>
+                </View>
+                <Text style={[shared.label, { marginTop: 12 }]}>Proveedor</Text>
+                <View style={local.pickerWrap}>
+                  <Picker
+                    selectedValue={modalForm.supplier}
+                    onValueChange={(value) =>
+                      setModalForm((prev) => ({ ...prev, supplier: value }))
                     }
                   >
-                    <option value="">Seleccioná</option>
+                    <Picker.Item label="Selecciona proveedor" value="" />
                     {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
+                      <Picker.Item
+                        key={supplier.id}
+                        label={supplier.name}
+                        value={String(supplier.id)}
+                      />
                     ))}
-                  </select>
-                </label>
-              </>
+                  </Picker>
+                </View>
+              </View>
             ) : (
-              <>
-                <div>
-                  <strong>Fecha:</strong> {selectedExpense.date || "-"}
-                </div>
-                <div>
-                  <strong>Categoría:</strong>{" "}
-                  {selectedExpense.category?.name ||
-                    selectedExpense.category_id ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Descripción:</strong>{" "}
-                  {selectedExpense.description || "-"}
-                </div>
-                <div>
-                  <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
-                </div>
-                <div>
-                  <strong>Método de pago:</strong>{" "}
-                  {selectedExpense.payment_method?.name ||
-                    selectedExpense.payment_method_id ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Proveedor:</strong>{" "}
-                  {selectedExpense.supplier?.name ||
-                    selectedExpense.supplier_id ||
-                    "-"}
-                </div>
-              </>
+              <View>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Fecha: </Text>
+                  {selectedExpense.date || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Categoria: </Text>
+                  {categoryById.get(String(selectedExpense.category_id)) || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Descripcion: </Text>
+                  {selectedExpense.description || "(Sin detalle)"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Monto: </Text>
+                  {formatCurrency(selectedExpense.amount)}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Metodo: </Text>
+                  {paymentById.get(String(selectedExpense.payment_method_id)) || "-"}
+                </Text>
+                <Text style={local.modalText}>
+                  <Text style={local.modalLabel}>Proveedor: </Text>
+                  {supplierById.get(String(selectedExpense.supplier_id)) || "-"}
+                </Text>
+              </View>
             )}
-            <div className="modal-actions">
+            <View style={local.modalActions}>
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
+                  <Pressable
+                    style={[shared.buttonSecondary, local.modalButton]}
+                    onPress={() => setIsEditingModal(false)}
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
+                    <Text style={shared.buttonTextLight}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={handleModalSave}
                   >
-                    Guardar cambios
-                  </button>
+                    <Text style={shared.buttonText}>Guardar cambios</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedExpense)}
+                  <Pressable
+                    style={[shared.buttonPrimary, local.modalButton]}
+                    onPress={() => openModalEdit(selectedExpense)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
+                    <Text style={shared.buttonText}>Editar</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[shared.buttonDanger, local.modalButton]}
+                    onPress={async () => {
                       const removed = await handleDelete(selectedExpense.id);
                       if (removed) closeModal();
                     }}
                   >
-                    Eliminar
-                  </button>
+                    <Text style={shared.buttonTextLight}>Eliminar</Text>
+                  </Pressable>
                 </>
               )}
-            </div>
-          </>
+            </View>
+          </View>
         )}
       </Modal>
-    </div>
+    </Screen>
   );
 }
+
+const local = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  headerText: {
+    flexShrink: 1,
+    marginRight: 12,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  filterInput: {
+    minWidth: 160,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  formGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  formField: {
+    width: "48%",
+    marginRight: "4%",
+    marginBottom: 12,
+  },
+  formFieldFull: {
+    width: "100%",
+    marginBottom: 12,
+  },
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pickerWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    overflow: "hidden",
+    minWidth: 180,
+  },
+  totalCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  totalValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.text,
+    marginTop: 6,
+  },
+  listItem: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  listMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 6,
+  },
+  listActions: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
+  smallButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+  },
+  centerText: {
+    textAlign: "center",
+    marginTop: 12,
+  },
+  modalLabel: {
+    fontWeight: "600",
+    color: colors.text,
+  },
+  modalText: {
+    color: colors.textMuted,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+});

@@ -4,8 +4,12 @@
 
 import Papa from "papaparse";
 
-const CSV_URL = import.meta.env.VITE_BANDIDOS_SERVICIOS_CSV_URL;
-const SCRIPT_URL = import.meta.env.VITE_BANDIDOS_SERVICIOS_SCRIPT_URL;
+const CSV_URL =
+  process.env.BANDIDOS_SERVICIOS_CSV_URL ||
+  process.env.VITE_BANDIDOS_SERVICIOS_CSV_URL;
+const SCRIPT_URL =
+  process.env.BANDIDOS_SERVICIOS_SCRIPT_URL ||
+  process.env.VITE_BANDIDOS_SERVICIOS_SCRIPT_URL;
 
 // ─────────────────────────────────────────────
 // Helper: parsear fecha dd/MM/yyyy
@@ -113,7 +117,6 @@ export async function createServiceOnSheet(service) {
   try {
     await fetch(SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
@@ -141,7 +144,6 @@ export async function deleteServiceOnSheet(sheetRow) {
   try {
     await fetch(SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
       },
