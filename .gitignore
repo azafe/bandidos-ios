@@ -1,8 +1,27 @@
+# Environment
 .env.local
+.env
+
+# Dependencies
 node_modules
+
+# iOS
 ios/Pods
 ios/build
+ios/Podfile.lock
+ios/.xcode.env.local
+*.xcworkspace
+*.xcuserstate
+DerivedData/
+
+# Android
 android/.gradle
 android/app/build
 android/build
-*.xcworkspace
+
+# Metro
+.metro-health-check*
+
+# Ruby
+ios/Gemfile.lock
+ios/vendor/
